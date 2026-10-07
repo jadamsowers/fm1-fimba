@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* KALIMBA in the browser (FoMni's emulator, from X0X's): the host simulator (host/kalimba_host.c: the whole app, UI and instrument,
+/* FiMba-1 in the browser (FoMni's emulator, from X0X's): the host simulator (host/kalimba_host.c: the whole app, UI and instrument,
  * against a simulated FM-1) compiled to WebAssembly and run in an AudioWorklet. The worklet asks
  * for audio; producing it advances the device's clock one millisecond at a time, which runs the
  * engine every 256 samples (the I2S half buffer) and the UI every 16 ms, as on the FM-1. The page

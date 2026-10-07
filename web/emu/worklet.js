@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// KALIMBA in an AudioWorklet: kalimba.wasm is the whole FM-1 app (web/emu/kalimba_web.c). Each render
+// FiMba-1 in an AudioWorklet: kalimba.wasm is the whole FM-1 app (web/emu/kalimba_web.c). Each render
 // quantum asks it for 128 frames, which runs the device's clock forward; between quanta the page's
 // input goes in and, about 30 times a second, the screen, the lights and any saved objects go out.
 

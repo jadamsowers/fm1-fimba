@@ -135,7 +135,7 @@ def check(path, app=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("package")
-    ap.add_argument("--app", help="the app.bin the package should carry (build/kalimba.bin)")
+    ap.add_argument("--app", help="the app.bin the package should carry (build/fimba.bin)")
     ap.add_argument("--ref", help="a package known to install and boot, to compare with")
     a = ap.parse_args()
     me = check(a.package, a.app)

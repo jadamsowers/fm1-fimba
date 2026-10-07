@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* KALIMBA app: the project (everything that is saved) and the app's entry points. Included by the unity
+/* FiMba-1 app: the project (everything that is saved) and the app's entry points. Included by the unity
  * build after gfx.c (drawing helpers in scope) and by the host simulator. (FoMni's app.h, reshaped.) */
 #pragma once
 #include <stdint.h>

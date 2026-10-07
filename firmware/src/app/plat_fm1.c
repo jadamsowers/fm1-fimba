@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* KALIMBA platform on the FM-1 (FoMni's): plat.h over Felucca's HAL, panel map, USB rings and storage.
+/* FiMba-1 platform on the FM-1 (FoMni's): plat.h over Felucca's HAL, panel map, USB rings and storage.
  * Part of the unity build (main.c), after the HAL, usb.c, storage.c and panel.c. */
 
 uint32_t plat_ms(void) { return fm1_ms; }

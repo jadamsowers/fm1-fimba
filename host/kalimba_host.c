@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* KALIMBA on the host: the whole app (UI, project, engine) against a simulated FM-1 driven by a script.
+/* FiMba-1 on the host: the whole app (UI, project, engine) against a simulated FM-1 driven by a script.
  * Audio goes to a WAV, the screen to PNGs, the lights to text, MIDI out to a log. The device-only
  * parts (HAL, USB, OTA, flash driver) are replaced by plat.h implemented here. (From FoMni's omni_host,
  * itself from X0X's x0x_host.)

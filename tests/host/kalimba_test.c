@@ -436,6 +436,51 @@ static void test_long_run(void)
     delay_check();                               /* the echo still lands where Time says, no km_init */
 }
 
+/* the bodies sound different (they once only nudged the level): the same phrase through each, its
+ * loudness, its brightness (the energy of the signal's slope against the signal's) and its low end
+ * (below ~180 Hz). Board thin and bright, Box warmer and darker, Gourd boomiest and darkest; all
+ * about as loud as the bare tine, so a body changes the character and not the volume */
+static void body_measure(int body, float *loud, float *bright, float *low)
+{
+    uint32_t i;
+    float e = 0.0f, d = 0.0f, lo = 0.0f, lp = 0.0f, lp2 = 0.0f, lp3 = 0.0f, prev = 0.0f;
+    fresh();
+    km_set(P_BODY, body);
+    for (i = 0; i < 8; i++)
+        km_pluck(6000 + km_degree_cents(0, (int)i), 100, 0, 220 * (int)i);
+    km_pluck(4800, 100, 0, 2000);
+    km_pluck(5500, 100, 0, 2030);
+    render(0, 44100 * 3);
+    for (i = 0; i < 44100 * 3; i++) {
+        float x = bufl[i];
+        lp += 0.025f * (x - lp);                 /* three poles at ~180 Hz: the air modes' octave */
+        lp2 += 0.025f * (lp - lp2);
+        lp3 += 0.025f * (lp2 - lp3);
+        e += x * x;
+        d += (x - prev) * (x - prev);
+        lo += lp3 * lp3;
+        prev = x;
+    }
+    *loud = 10.0f * fm_log2f(e) * 0.30103f;
+    *bright = 10.0f * fm_log2f(d / e) * 0.30103f;
+    *low = 10.0f * fm_log2f(lo / e) * 0.30103f;
+}
+
+static void test_bodies(void)
+{
+    float l[BODY_N], b[BODY_N], lo[BODY_N];
+    int i;
+    for (i = 0; i < BODY_N; i++) {
+        body_measure(i, &l[i], &b[i], &lo[i]);
+        CHECK(fm_fabsf(l[i] - l[BODY_NONE]) < 3.0f, "body %d loudness %+.1f dB from none", i, (double)(l[i] - l[BODY_NONE]));
+    }
+    CHECK(b[BODY_BOARD] > b[BODY_BOX] + 2.0f && b[BODY_BOX] > b[BODY_GOURD] + 1.0f && b[BODY_NONE] > b[BODY_GOURD] + 3.0f,
+          "brightness: board %.1f, none %.1f, box %.1f, gourd %.1f", (double)b[BODY_BOARD], (double)b[BODY_NONE],
+          (double)b[BODY_BOX], (double)b[BODY_GOURD]);
+    CHECK(lo[BODY_GOURD] > lo[BODY_BOARD] + 3.0f && lo[BODY_BOX] > lo[BODY_BOARD] + 3.0f,
+          "low end: board %.1f, box %.1f, gourd %.1f dB", (double)lo[BODY_BOARD], (double)lo[BODY_BOX], (double)lo[BODY_GOURD]);
+}
+
 static void listen(const char *dir)
 {
     int m, i, c[4];
@@ -472,6 +517,7 @@ int main(int argc, char **argv)
     test_delay();
     test_grains();
     test_body();
+    test_bodies();
     test_long_run();
     if (argc > 1)
         listen(argv[1]);

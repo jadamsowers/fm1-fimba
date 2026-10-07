@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* KALIMBA firmware for the M-VAVE FM-1: one compilation unit for the platform and the app
+/* FiMba-1 firmware for the M-VAVE FM-1: one compilation unit for the platform and the app
  * (Felucca's layout, as X0X: the HAL is header-only, so everything that touches it is here).
  * The instrument (dsp/kalimba.c) is a separate unit compiled at -O2 by tools/build.py; this one is
  * -Os. Order matters. */

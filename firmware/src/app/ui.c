@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* KALIMBA UI: the panel and the screen. Part of the unity build (after gfx.c and project.c); the host
+/* FiMba-1 UI: the panel and the screen. Part of the unity build (after gfx.c and project.c); the host
  * simulator includes it too. (The frame of it, knobs, bands and autosave, is FoMni's ui.c.)
  *
  *   white keys     the tines: one each, laid out by Layout (Tine: the kalimba's V, Linear, Split)

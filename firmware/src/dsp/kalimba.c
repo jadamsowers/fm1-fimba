@@ -425,20 +425,38 @@ static inline float svf_bp(svf_t *s, float x)
     s->s2 = 2.0f * v2 - s->s2;
     return v1;
 }
-/* per body: the Helmholtz air mode (the hole: hz, gain, q; 0 for none) and two plate modes */
-static const float BODY_T[BODY_N][9] = {
-    {0},
-    {0.0f, 0.0f, 1.0f, 420.0f, 0.30f, 4.0f, 1250.0f, 0.15f, 5.0f},
-    {220.0f, 0.70f, 6.0f, 560.0f, 0.30f, 4.0f, 1400.0f, 0.15f, 5.0f},
-    {140.0f, 0.90f, 4.0f, 380.0f, 0.40f, 3.0f, 900.0f, 0.15f, 4.0f},
+/* The bodies. What the ear tells them apart by: how the direct sound is coloured (a plank radiates
+ * little bass and sounds thin; a box warms it; a gourd is hollow and dark), the body's own resonances
+ * among the tines' frequencies, and the knock of each pluck through the wood (the thumb pushes the
+ * instrument as well as the tine). Per body:
+ *   modes  four band-pass resonances: the air mode first (the sound hole: Helmholtz, which the wah
+ *          moves), then the plate or shell modes; hz, q, level (peak gain)
+ *   tone   the direct sound: low cut and high cut (Hz; 0 none)
+ *   knock  how much of the pluck's force reaches the body
+ *   out    the level, so that a body changes the character and not the volume */
+typedef struct {
+    float m[4][3];
+    float lo_cut, hi_cut, knock, out;
+} body_t;
+static const body_t BODIES[BODY_N] = {
+    {{{0}}, 0.0f, 0.0f, 0.0f, 1.0f},                                                       /* None: the bare tine */
+    {{{0.0f, 1.0f, 0.0f}, {380.0f, 3.0f, 0.55f}, {980.0f, 4.0f, 0.45f}, {2300.0f, 5.0f, 0.35f}},
+     260.0f, 0.0f, 0.6f, 1.05f},                                                           /* Board: a plank, thin and bright */
+    {{{210.0f, 7.0f, 2.6f}, {460.0f, 5.0f, 0.9f}, {1120.0f, 6.0f, 0.4f}, {2700.0f, 6.0f, 0.18f}},
+     0.0f, 6500.0f, 1.0f, 0.58f},                                                          /* Box: warm, a bloom at the hole */
+    {{{135.0f, 6.0f, 2.2f}, {330.0f, 4.0f, 1.1f}, {760.0f, 5.0f, 0.8f}, {1650.0f, 4.0f, 0.25f}},
+     0.0f, 3800.0f, 1.4f, 0.5f},                                                           /* Gourd: hollow, boomy, dark */
 };
-static svf_t bf[3];
+static svf_t bf[4];
 static float hole_amt[HOLE_N], wah_ph, wah_inc;
+static float tone_lo_a, tone_hi_a, tlo_l, tlo_r, thi_l, thi_r, knock_g, body_out = 1.0f;
+
+static float onepole(float hz) { return hz > 0.0f ? 1.0f - fm_expf(-FM_TWO_PI * hz / KM_SR) : 1.0f; }
 
 static void body_coefs(void)
 {
-    const float *t = BODY_T[(unsigned)par[P_BODY] < BODY_N ? par[P_BODY] : 0];
-    float cover = (float)par[P_WAH] * 0.01f, o, lfo = 0.0f;
+    const body_t *bd = &BODIES[(unsigned)par[P_BODY] < BODY_N ? par[P_BODY] : 0];
+    float cover = (float)par[P_WAH] * 0.01f, o, lfo;
     int i;
     for (i = 0; i < HOLE_N; i++)
         cover += hole_amt[i];
@@ -449,14 +467,14 @@ static void body_coefs(void)
     cover = fm_clampf(cover, 0.0f, 1.0f);
     o = 1.0f - 0.9f * cover;
     km_hole_open = o;
-    for (i = 0; i < 3; i++) {
-        float hz = t[3 * i], gain = t[3 * i + 1], qq = t[3 * i + 2];
-        if (i == 0) {                                   /* Helmholtz: f ~ sqrt(the hole's area) */
+    for (i = 0; i < 4; i++) {
+        float hz = bd->m[i][0], qq = bd->m[i][1], gain = bd->m[i][2];
+        if (i == 0 && hz > 0.0f) {                      /* Helmholtz: f ~ sqrt(the hole's area) */
             hz *= fm_sqrtf(o);
-            gain *= 0.45f + 0.55f * o;
+            gain *= 0.35f + 0.65f * o;
             qq *= 1.0f + 0.8f * (1.0f - o);
         }
-        if (hz <= 0.0f) {
+        if (hz <= 0.0f || gain <= 0.0f) {
             bf[i].gain = 0.0f;
             continue;
         }
@@ -468,6 +486,10 @@ static void body_coefs(void)
             bf[i].gain = gain * k;                      /* the band-pass peaks at 1/k: level by gain */
         }
     }
+    tone_lo_a = bd->lo_cut > 0.0f ? onepole(bd->lo_cut) : 0.0f;
+    tone_hi_a = onepole(bd->hi_cut);
+    knock_g = bd->knock;
+    body_out = bd->out;
 }
 
 /* ------------------------------------------------------------ reverb --- */
@@ -738,8 +760,9 @@ static void quiet(void)
         gr[i].on = 0;
     for (i = 0; i < (int)DLY_N; i++)
         dly_buf[i] = 0;
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 4; i++)
         bf[i].s1 = bf[i].s2 = 0.0f;
+    tlo_l = tlo_r = thi_l = thi_r = 0.0f;
     d_lp = d_cur_l = d_cur_r = d_prev_l = d_prev_r = 0.0f;
     plate_init();
 }
@@ -842,7 +865,7 @@ static void drain(void)
 
 /* ------------------------------------------------------------- render --- */
 #define BLK 64                                          /* a chunk: plucks due land within 1.5 ms */
-static float mixl[BLK], mixr[BLK], mono[BLK], xb[BLK];
+static float mixl[BLK], mixr[BLK], mono[BLK], xb[BLK], knock[BLK];   /* knock: the plucks' force */
 
 static void render_voices(uint32_t n)
 {
@@ -858,6 +881,7 @@ static void render_voices(uint32_t n)
             float ph = v->ex_ph;
             for (j = 0; j < n; j++) {
                 xb[j] = ph < 0.5f ? v->ex_amp * fm_sin_turns(ph) : 0.0f;
+                knock[j] += xb[j];
                 ph += v->ex_inc;
             }
             v->ex_ph = ph;
@@ -931,17 +955,25 @@ static void render_body(uint32_t n)
             wah_ph -= 1.0f;
         body_coefs();
     }
-    for (j = 0; j < n; j++) {
-        float x = mono[j], b = 0.0f;
-        for (i = 0; i < 3; i++)
-            if (bf[i].gain > 0.0f)
-                b += svf_bp(&bf[i], x) * bf[i].gain;
-        if (par[P_BODY] != BODY_NONE) {
-            mixl[j] += b;
-            mixr[j] += b;
+    if (par[P_BODY] != BODY_NONE) {
+        const float la = tone_lo_a, ha = tone_hi_a, kg = knock_g * 6.0f, out = body_out;
+        for (j = 0; j < n; j++) {
+            float x = mono[j] + knock[j] * kg, b = 0.0f, l = mixl[j], r = mixr[j];
+            for (i = 0; i < 4; i++)
+                if (bf[i].gain > 0.0f)
+                    b += svf_bp(&bf[i], x) * bf[i].gain;
+            thi_l += ha * (l - thi_l);                  /* the direct sound through the body's tone */
+            thi_r += ha * (r - thi_r);
+            tlo_l += la * (thi_l - tlo_l);
+            tlo_r += la * (thi_r - tlo_r);
+            mixl[j] = (thi_l - tlo_l + b) * out;
+            mixr[j] = (thi_r - tlo_r + b) * out;
+            mono[j] = (mono[j] + b) * out;
         }
-        x += b;
-        mono[j] = x;
+        thi_l = fm_flush(thi_l);
+        thi_r = fm_flush(thi_r);
+        tlo_l = fm_flush(tlo_l);
+        tlo_r = fm_flush(tlo_r);
     }
     if (buzz_amt > 0.0f) {                              /* the buzzers: they touch past a gap */
         float th = 0.05f + 0.2f * (1.0f - buzz_amt), lvl = 0.0f;
@@ -966,7 +998,7 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
     uint32_t j;
     int i, active = 0;
     for (j = 0; j < n; j++)
-        mixl[j] = mixr[j] = mono[j] = 0.0f;
+        mixl[j] = mixr[j] = mono[j] = knock[j] = 0.0f;
     render_voices(n);
     render_body(n);
     for (i = 0; i < NGRAIN; i++)

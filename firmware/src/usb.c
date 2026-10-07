@@ -208,13 +208,13 @@ static const uint8_t STR0[4] = {4, 3, 0x09, 0x04};
 static const uint8_t STR1[] = {42, 3, 'H', 0, 0xFC, 0, 'g', 0, 'e', 0, 'l', 0, 't', 0, 'o', 0, 'n', 0, ' ', 0, 'I', 0,
                                'n', 0, 's', 0, 't', 0, 'r', 0, 'u', 0, 'm', 0, 'e', 0, 'n', 0, 't', 0, 's', 0};
 #else
-static const uint8_t STR1[] = {16, 3, 'K', 0, 'a', 0, 'l', 0, 'i', 0, 'm', 0, 'b', 0, 'a', 0};   /* manufacturer */
+static const uint8_t STR1[] = {12, 3, 'F', 0, 'i', 0, 'M', 0, 'b', 0, 'a', 0};   /* manufacturer: FiMba */
 #endif
 #ifdef FELUCCA_LOADER
 static const uint8_t STR2[] = {30, 3, 'F', 0, 'e', 0, 'l', 0, 'u', 0, 'c', 0, 'c', 0, 'a', 0, ' ', 0, 'U', 0, 'p', 0,
                                'd', 0, 'a', 0, 't', 0, 'e', 0};
 #else
-static const uint8_t STR2[] = {26, 3, 'K', 0, 'a', 0, 'l', 0, 'i', 0, 'm', 0, 'b', 0, 'a', 0, ' ', 0, 'F', 0, 'M', 0, '-', 0, '1', 0};
+static const uint8_t STR2[] = {22, 3, 'F', 0, 'i', 0, 'M', 0, 'b', 0, 'a', 0, ' ', 0, 'F', 0, 'M', 0, '-', 0, '1', 0};   /* FiMba FM-1 */
                                                      /* product: the installers look for "FM-1" in it */
 #endif
 

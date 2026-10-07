@@ -1,6 +1,7 @@
-# KALIMBA for the M-VAVE FM-1
+# FiMba-1 for the M-VAVE FM-1
 
-KALIMBA turns the M-VAVE FM-1 into a thumb piano. The 16 white keys are the tines, laid out the way a
+FiMba-1 turns the M-VAVE FM-1 into a thumb piano. (The name is kalimba with the FM-1 hidden in it,
+the way FoMni hides FM in Omnichord.) The 16 white keys are the tines, laid out the way a
 real kalimba's are: the longest (lowest) tine in the middle, with the scale alternating outward left,
 right, left, right. The 11 black keys do something else: they play thumb-roll chords, a chromatic
 second row, or performance moves (palm mute, covering the sound hole, freeze, octave shift,
@@ -57,7 +58,11 @@ strength. **Hardness** sets how hard that is, and over MIDI velocity does.
 - **ENV, Body**: Body (None, Board, Box, Gourd), Buzz (mbira buzzers), Wah (how much of the sound
   hole is covered), Wah rate (*Hand* means no LFO, so the hole is moved by the knob, the mod wheel,
   pressure or the Hole key; otherwise a hand fluttering over it, 0.1 to 8 Hz). The hole only exists
-  on Box and Gourd.
+  on Box and Gourd. The bodies, all at about the same loudness:
+  - *None*: the bare tine.
+  - *Board*: a plank, as on a board kalimba. Thin and bright, with a woody knock.
+  - *Box*: a hollow box with a sound hole. Warm, with a bloom around 200 Hz and softened highs.
+  - *Gourd*: a calabash resonator, as under an mbira. Boomy, hollow and dark.
 - **FX, Space**: Reverb, Size, Delay (echo level), Time (40–740 ms, ping-pong).
 - **LFO, Grain**: Grains (level), Grain ms (20–500), Density (grains/s), Pitch (−12, −7, 0, +7,
   +12, +19, Shimmer = unison/fifth/octave at random, Reverse).
@@ -107,9 +112,14 @@ MIDI comes in over USB and the TRS jack, on the channel set on Setup (Omni by de
 
 ```
 tests/run_tests.sh      # the instrument, the platform pieces, the whole app in a simulator
-./build.sh              # build/kalimba.fwsc (needs JieLi's toolchain and the AC79 SDK: BUILDING.md)
-python3 tools/fm1_install.py build/kalimba.fwsc     # install it over USB
+./build.sh              # build/fimba.fwsc (needs JieLi's toolchain and the AC79 SDK: BUILDING.md)
+python3 tools/fm1_install.py build/fimba.fwsc     # install it over USB
 ```
+
+**In a browser, without the FM-1:** `web/emu/build.sh` (needs Emscripten) builds the emulator, the
+firmware's UI and sound engine compiled to WebAssembly. `build/emu/FiMba-1.html` is all of it in one
+file: double-click it, or `open build/emu/FiMba-1.html`, and it runs from disk with no web server.
+Chrome or Edge is best (Web MIDI works there); the mouse, touch and computer keyboard work anywhere.
 
 `build/host/kalimba_host SCRIPT OUTDIR` runs the whole app on a computer from a script
 (`tests/scenarios/*.kal`): screenshots, audio and the MIDI it sends come out. The engine test writes
@@ -130,4 +140,4 @@ reverb are [FoMni](https://github.com/charlesvestal/fm1-fomni)'s by Charles Vest
 [X0X](https://github.com/charlesvestal/fm1-x0x) and [Felucca](https://github.com/hugelton/Felucca) by
 Leo Kuroshita (Hügelton Instruments). GPL-3.0-only; see [LICENSING.md](LICENSING.md).
 
-KALIMBA isn't affiliated with or endorsed by M-VAVE, Hügelton Instruments or the authors of FoMni.
+FiMba-1 isn't affiliated with or endorsed by M-VAVE, Hügelton Instruments or the authors of FoMni.

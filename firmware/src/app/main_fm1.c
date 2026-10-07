@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Boot, audio ISR and main loop adapted from Felucca's main.c / audio.c, Copyright (C) 2026
  * Leo Kuroshita (@kurogedelic), Hugelton Instruments. */
-/* KALIMBA on the FM-1 (FoMni's, from X0X's): boot (WDT first, boot-loop guard, guards), LCD, input (TIMER5
+/* FiMba-1 on the FM-1 (FoMni's, from X0X's): boot (WDT first, boot-loop guard, guards), LCD, input (TIMER5
  * 10 kHz), audio (ALNK0), USB; then the main loop: UI at ~60 frames/s, input polled in between. */
 extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
 extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
@@ -145,7 +145,7 @@ static void fm1_fault(const fm1_crash_t *c)
     uint32_t t0;
     fm1_audio_stop();
     lcd_fill(0, 0, 240, 240, RGB(160, 0, 0));
-    draw_text_box(0, 8, 240, &FONT_S, "KALIMBA CRASH", C_WHITE, 1);
+    draw_text_box(0, 8, 240, &FONT_S, "FiMba-1 CRASH", C_WHITE, 1);
     hexs(b, c->vec);
     draw_text_box(10, 40, 220, &FONT_S, b, C_WHITE, 0);
     hexs(b, c->pc);
@@ -182,7 +182,7 @@ static void safe_main(void)
     char b[24];
     uint32_t t0, play;
     lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 18, 240, &FONT_B, "KALIMBA SAFE MODE", C_HI, 1);
+    draw_text_box(0, 18, 240, &FONT_B, "FiMba-1 SAFE MODE", C_HI, 1);
     draw_text_box(0, 52, 240, &FONT_S, "IT CRASHED TWICE", C_WHITE, 1);
     draw_text_box(0, 72, 240, &FONT_S, "WHILE STARTING.", C_WHITE, 1);
     draw_text_box(0, 102, 240, &FONT_S, "NO SOUND. USB IS ON:", C_WHITE, 1);
@@ -233,8 +233,8 @@ static void splash(void)
     lcd_fill(0, 0, 240, 240, RGB(250, 244, 232));
     cv_begin(240, 64, RGB(250, 244, 232));
     {
-        int32_t w = text_w(&FONT_L, "KALIMBA");
-        cv_text((240 - w) / 2, 0, &FONT_L, "KALIMBA", RGB(196, 142, 92));
+        int32_t w = text_w(&FONT_L, "FiMba-1");
+        cv_text((240 - w) / 2, 0, &FONT_L, "FiMba-1", RGB(196, 142, 92));
         w = text_w(&FONT_S, "A thumb piano for the FM-1");
         cv_text((240 - w) / 2, 42, &FONT_S, "A thumb piano for the FM-1", RGB(150, 132, 110));
     }
