@@ -1,0 +1,50 @@
+# the project survives a restart: SAVE, then autosave after a quiet moment
+tap HOME
+spin K1 3
+expect par0 3
+tap SAVE
+expect store_writes 1
+expect dirty 0
+reboot
+expect par0 3
+# a change saves itself four seconds after the last touch, once the tines are quiet
+spin K4 -30
+expect par3 25
+expect dirty 1
+wait 3000
+expect store_writes 1
+wait 2000
+expect store_writes 2
+expect dirty 0
+reboot
+expect par3 25
+# layouts and scales: Linear in A minor pentatonic, Split
+tap SEL
+spin K1 1
+expect par16 1
+spin K2 3
+spin K3 9
+expect white0 5700
+expect white1 6000
+spin K1 1
+expect par16 2
+expect white8 5700
+expect white0 4500
+shot split.png
+# live grains don't hold autosave back (they never stop spawning while Grains is up)...
+tap LFO
+spin K1 30
+expect par12 30
+wait 6000
+expect dirty 0
+# ...frozen ones do: an erase would cut the drone
+tapkey w7
+tap PLAY
+expect frozen 3
+tap HOME
+spin K2 5
+wait 6000
+expect dirty 1
+tap PLAY
+wait 6000
+expect dirty 0

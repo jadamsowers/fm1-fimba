@@ -1,0 +1,66 @@
+# MIDI in: notes pluck the tine of their pitch on any channel (Omni), CCs, bend, program, the pedal
+midi 90 3C 64
+wait 20
+expect tine6000 >5
+midi 93 48 50
+wait 20
+expect tine7200 >5
+# note off does nothing while Release is Ring
+midi 80 3C 00
+wait 300
+expect tine6000 >5
+# Release Damp: note off (and note on with velocity 0) damp
+tap ARP
+midi 80 3C 00
+midi 93 48 00
+wait 300
+expect tine6000 <2
+expect tine7200 <2
+# the pedal holds the damp until it lifts
+midi B0 40 7F
+midi 90 40 64
+wait 20
+midi 80 40 00
+wait 300
+expect tine6400 >5
+midi B0 40 00
+wait 300
+expect tine6400 <2
+# MIDI ch 3 only: channel 1 is ignored, channel 3 plucks
+tap GLO
+spin K2 3
+expect par25 3
+midi 90 43 64
+wait 20
+expect tine6700 0
+midi 92 43 64
+wait 20
+expect tine6700 >5
+# CC1: the hole; CC74: Tone; CC91: Reverb; program change: material
+midi B2 01 7F
+wait 20
+expect hole <15
+midi B2 01 00
+wait 20
+expect hole 100
+midi B2 4A 00
+midi B2 5B 7F
+midi C2 03 00
+wait 20
+expect par3 0
+expect par8 100
+expect par0 3
+# pitch bend: up and back, nothing breaks
+midi E2 7F 7F
+midi 92 48 64
+wait 100
+midi E2 00 40
+wait 100
+# clock and other system messages are ignored
+midi F8 00 00
+midi FA 00 00
+# MIDI out: a key sends a note on and its release a note off
+expect midi_out 0
+tapkey w7
+expect midi_out 2
+expect dropped 0

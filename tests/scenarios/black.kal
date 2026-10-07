@@ -1,0 +1,92 @@
+# the black keys' three modes
+wav black.wav
+# Chords (the default): b0 = C, b1 = Dm, b4 = G; a roll of four tines, Strum ms apart
+expect par19 0
+key b0 down
+wait 10
+expect voices 1
+wait 150
+expect voices 4
+expect tine6000 >5
+expect tine6400 >5
+expect tine6700 >5
+expect tine7200 >5
+key b0 up
+tap SEL
+wait 50
+shot chords.png
+key b4 down
+wait 200
+expect tine6700 >5
+expect tine7100 >5
+expect tine7400 >5
+key b4 up
+# Release Damp (ARP): letting go of a chord key damps its roll
+tap ARP
+expect par23 1
+key b1 down
+wait 200
+expect tine6200 >5
+key b1 up
+wait 400
+expect tine6200 <2
+tap ARP
+expect par23 0
+# Sharps: b0 is w0's tine (C6 in Tine layout) a semitone up
+spin K4 1
+expect par19 1
+wait 50
+shot sharps.png
+tapkey b0
+wait 20
+expect tine8500 >5
+# b3 (C#4) sits right of w4 (C4), whose tine in the Tine layout is B4: B4 + 100
+tapkey b3
+wait 20
+expect white4 7100
+expect tine7200 >5
+# Perform
+spin K4 1
+expect par19 2
+wait 50
+shot perform.png
+tapkey w7
+wait 50
+expect tine6000 >5
+# Mute: every tine damped
+tapkey b0
+wait 400
+expect tine6000 <2
+# Hole: held covers the sound hole
+key b1 down
+wait 30
+expect hole <15
+key b1 up
+wait 30
+expect hole 100
+# Freeze toggles
+tapkey b2
+wait 10
+expect frozen 3
+tapkey b2
+wait 10
+expect frozen 0
+# Oct- held: the tines an octave down while it is held
+key b3 down
+wait 10
+expect octshift -1
+tapkey w7
+wait 30
+expect tine4800 >5
+key b3 up
+wait 10
+expect octshift 0
+# materials on b5..b10
+tapkey b9
+expect par0 4
+tapkey b5
+expect par0 0
+wait 1000
+wavstop
+expect peak_db_max -0.3
+expect dropped 0

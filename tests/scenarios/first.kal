@@ -1,0 +1,78 @@
+# a first look and listen: the Tine layout in C, a run up the V, every page
+# (params: 0 Material 1 Hardness 2 Decay 3 Tone 4 Body 5 Buzz 6 Wah 7 Wah rate 8 Reverb 9 Size 10 Delay
+#  11 Time 12 Grains 13 Grain ms 14 Density 15 Pitch 16 Layout 17 Scale 18 Key 19 Black 20 Feedback
+#  21 Spray 22 Strum 23 Release 24 Tune 25 MIDI ch 26 MIDI out 27 Width 28 Octave)
+wav first.wav
+wait 300
+shot home.png
+expect view 0
+expect white7 6000
+expect white8 6200
+expect white6 6400
+expect white0 8400
+# the middle out, alternating sides: C D E F G A B C
+tapkey w7
+tapkey w8
+tapkey w6
+tapkey w9
+tapkey w5
+tapkey w10
+tapkey w4
+tapkey w11
+wait 50
+shot ringing.png
+expect tine7200 >10
+expect voices >5
+leds
+wait 2500
+wavstop
+expect peak_db_max -0.5
+expect peak_db_min -30
+# the pages, by their buttons
+tap ENV
+expect view 1
+shot body.png
+tap FX
+expect view 2
+shot space.png
+tap LFO
+expect view 3
+shot grain.png
+tap SEL
+expect view 4
+shot keys.png
+tap SEQ
+expect view 5
+shot more.png
+tap GLO
+expect view 6
+shot setup.png
+tap EDIT
+expect view 0
+# the encoders: SELECT material, ALGORITHM scale, PRESETS key
+turn SELECT 2
+expect par0 2
+turn ALGO 2
+expect par17 2
+turn PRESET 3
+expect par18 3
+expect white7 6300
+turn PRESET -4
+expect par18 11
+# B, pentatonic: the middle tine B3 (the octave starts at C4)
+expect white7 5900
+tap OCT-
+expect par28 -1
+expect white7 4700
+tap OCT+
+tap OCT+
+expect par28 1
+# knobs on the Tine page
+tap HOME
+spin K2 -20
+expect par1 25
+spin K3 30
+expect par2 80
+wait 50
+shot knobs.png
+expect dirty 1

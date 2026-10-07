@@ -1,0 +1,52 @@
+# the effects: delay, grains (live and frozen), reverb size, body, buzz, wah
+wav fx.wav
+tap FX
+spin K3 60
+expect par10 60
+spin K4 -130
+expect par11 200
+tap SEQ
+spin K1 20
+expect par20 65
+tapkey w7
+wait 1500
+# grains: live, then frozen (PLAY)
+tap LFO
+spin K1 80
+expect par12 80
+spin K4 -2
+expect par15 2
+tapkey w8
+tapkey w9
+wait 600
+expect grains >0
+tap PLAY
+expect frozen 3
+wait 2000
+expect grains >0
+shot grains.png
+tap PLAY
+expect frozen 0
+spin K4 4
+expect par15 6
+wait 1000
+spin K4 1
+expect par15 7
+wait 1000
+# the body: a gourd, buzzers, the wah LFO
+tap ENV
+spin K1 1
+expect par4 3
+spin K2 80
+spin K4 50
+tapkey w7
+tapkey w6
+wait 400
+shot body_wah.png
+spin K1 -3
+expect par4 0
+tapkey w7
+wait 500
+wavstop
+expect peak_db_max -0.1
+expect dropped 0
