@@ -1,0 +1,66 @@
+# the Keyboard layout: every key, white and black, plays its printed note, F3 on the lowest;
+# Transpose (Keys page KNOB 2, or PRESETS) and the octave shift it
+# (params: 16 Layout 19 Black 28 Octave 29 Transpose)
+wav keyboard.wav
+tap SEL
+spin K1 1
+expect par16 1
+expect key0 5300
+expect key26 7900
+expect white0 5300
+expect white1 5500
+wait 50
+shot keyboard.png
+# white and black keys, as printed: F3, F#3 (the first black key), C4, G5
+tapkey w0
+tapkey b0
+tapkey w4
+tapkey w15
+wait 30
+expect tine5300 >5
+expect tine5400 >5
+expect tine6000 >5
+expect tine7900 >5
+expect midi_out 8
+# the Keys page now shows Layout, Transpose, Octave
+spin K2 2
+expect par29 2
+expect key0 5500
+turn PRESET -3
+expect par29 -1
+expect key0 5200
+tap OCT+
+expect par28 1
+expect key0 6400
+tapkey b2
+# (b2 is A#3: -1 and an octave up, A4)
+wait 30
+expect tine6900 >5
+wait 50
+shot keyboard_transposed.png
+# the black keys play notes here even with Black on Perform (which belongs to the Tine layout)
+tap OCT-
+spin K2 1
+expect par29 0
+spin K1 -1
+expect par16 0
+spin K4 2
+expect par19 2
+spin K1 1
+expect par16 1
+tapkey w7
+wait 50
+tapkey b0
+wait 100
+expect tine5400 >5
+expect tine6500 >5
+# the layout and transpose are kept
+spin K2 5
+tap SAVE
+reboot
+expect par16 1
+expect par29 5
+expect key0 5800
+wait 1000
+wavstop
+expect dropped 0

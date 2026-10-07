@@ -38,6 +38,7 @@ enum {
     P_FEEDBACK, P_GSPRAY, P_STRUM, P_RELEASE,        /* More page */
     P_TUNE, P_MIDICH, P_MIDIOUT, P_WIDTH,            /* Setup page */
     P_OCTAVE,                                        /* OCT- / OCT+ */
+    P_TRANSPOSE,                                     /* the Keyboard layout's transpose (Keys page) */
     P_NPARAMS
 };
 typedef struct {
@@ -49,7 +50,7 @@ void km_param_text(int i, int v, char *buf);   /* the value as the screen shows 
 
 enum { MAT_STEEL, MAT_BRASS, MAT_BRONZE, MAT_ALU, MAT_BAMBOO, MAT_GLASS, MAT_N };
 enum { BODY_NONE, BODY_BOARD, BODY_BOX, BODY_GOURD, BODY_N };
-enum { LAY_TINE, LAY_LINEAR, LAY_SPLIT, LAY_N };
+enum { LAY_TINE, LAY_KEYBOARD, LAY_N };
 enum { BLK_CHORDS, BLK_SHARPS, BLK_PERFORM, BLK_N };
 enum { GP_DOWN12, GP_DOWN7, GP_UNISON, GP_UP7, GP_UP12, GP_UP19, GP_SHIMMER, GP_REVERSE, GP_N };
 #define KM_NSCALE 12
@@ -68,8 +69,10 @@ const km_material_t *km_material(int i);
 /* ---- music: everything in cents over MIDI note 0 (6000 = middle C) */
 int km_scale_len(int scale);
 int km_degree_cents(int scale, int degree);        /* the degree's cents over the tonic (any degree, < 0 too) */
-/* the tine a white key plays: layout, scale, key (0..11), octave; w 0..15 left to right */
+/* Tine layout: the tine a white key plays (scale, key 0..11, octave; w 0..15 left to right) */
 int km_white_cents(int layout, int scale, int key, int octave, int w);
+/* Keyboard layout: the note of key k (0..26, F3..G5, white and black as printed), transposed */
+int km_keyboard_cents(int transpose, int octave, int k);
 /* the black key k's chord (BLK_CHORDS): up to 4 notes, returns how many */
 int km_chord_cents(int scale, int key, int octave, int k, int out[4]);
 const char *km_chord_name(int scale, int key, int k, char *buf);   /* "C", "Dm", "G7" (8 bytes) */

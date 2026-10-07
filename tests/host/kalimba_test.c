@@ -152,13 +152,15 @@ static void test_music(void)
         CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 7 - i) > km_white_cents(LAY_TINE, 0, 0, 0, 8 - i), "tine left V %d", i);
         CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 8 + i) > km_white_cents(LAY_TINE, 0, 0, 0, 7 + i), "tine right V %d", i);
     }
-    for (i = 1; i < 16; i++)
-        CHECK(km_white_cents(LAY_LINEAR, 2, 9, 0, i) > km_white_cents(LAY_LINEAR, 2, 9, 0, i - 1), "linear up %d", i);
-    CHECK(km_white_cents(LAY_LINEAR, 3, 9, 0, 0) == 5700, "linear A minor-penta: A3 %d", km_white_cents(LAY_LINEAR, 3, 9, 0, 0));
+    CHECK(km_white_cents(LAY_TINE, 3, 9, 0, 7) == 5700, "A minor-penta: A3 in the middle %d", km_white_cents(LAY_TINE, 3, 9, 0, 7));
     CHECK(km_white_cents(LAY_TINE, 0, 5, 0, 7) == 6500 && km_white_cents(LAY_TINE, 0, 6, 0, 7) == 5400, "keys fold at F#");
-    CHECK(km_white_cents(LAY_LINEAR, 2, 0, 0, 5) == 7200, "penta wraps at 5");
-    for (i = 0; i < 8; i++)
-        CHECK(km_white_cents(LAY_SPLIT, 0, 0, 0, i + 8) - km_white_cents(LAY_SPLIT, 0, 0, 0, i) == 1200, "split octave %d", i);
+    CHECK(km_white_cents(LAY_TINE, 2, 0, 0, 10) == 7200, "penta wraps at 5 (w10 is degree 5)");
+    /* Keyboard: the keys as printed, F3 on the lowest, chromatic, transposed */
+    for (i = 0; i < 27; i++)
+        CHECK(km_keyboard_cents(0, 0, i) == 5300 + 100 * i, "keyboard key %d", i);
+    CHECK(km_keyboard_cents(0, 0, 26) == 7900, "the top key is G5");
+    CHECK(km_keyboard_cents(2, 0, 0) == 5500 && km_keyboard_cents(-12, 0, 0) == 4100, "transpose");
+    CHECK(km_keyboard_cents(-1, 1, 0) == 6400, "transpose and octave");
     CHECK(km_degree_cents(0, -1) == -100, "degree -1 of major (B below) %d", km_degree_cents(0, -1));
     CHECK(km_degree_cents(2, -5) == -1200, "degree -5 of penta");
     /* chords in C major: C Dm Em F G Am Bdim, then C7?.. the diatonic sevenths: Cmaj7 shows as C7 here */

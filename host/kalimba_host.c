@@ -22,7 +22,8 @@
  *   leds                         print the lit buttons and keys
  *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
  *                                (WHAT: view dirty frozen store_writes midi_out voices grains hole octshift
- *                                 dropped parN whiteW (cents of white key W) tineC (level x100 of the tine at
+ *                                 dropped parN whiteW (cents of white key W) keyK (cents of key K, Keyboard
+ *                                 layout) tineC (level x100 of the tine at
  *                                 C cents) peak_db_max peak_db_min)
  *   reboot                       re-run boot from the simulated flash (persistence test)
  */
@@ -380,6 +381,8 @@ static int expect(const char *what, const char *val)
         got = proj.par[atoi(what + 3)];
     else if (!strncmp(what, "white", 5))          /* whiteW: the cents white key W plays now */
         got = white_cents(atoi(what + 5));
+    else if (!strncmp(what, "key", 3))            /* keyK: the cents key K plays in the Keyboard layout */
+        got = key_cents(atoi(what + 3));
     else if (!strncmp(what, "tine", 4))           /* tineC: the level x 100 of the tine at C cents */
         got = tine(atoi(what + 4));
     else if (!strcmp(what, "peak_db_max") || !strcmp(what, "peak_db_min")) {

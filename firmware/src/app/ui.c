@@ -2,14 +2,16 @@
 /* FiMba-1 UI: the panel and the screen. Part of the unity build (after gfx.c and project.c); the host
  * simulator includes it too. (The frame of it, knobs, bands and autosave, is FoMni's ui.c.)
  *
- *   white keys     the tines: one each, laid out by Layout (Tine: the kalimba's V, Linear, Split)
- *   black keys     by Black: Chords (a thumb roll of the scale's chords), Sharps (the white key's
- *                  tine a semitone up: a chromatic kalimba's second row) or Perform (palm mute, hole,
- *                  freeze, octave down / up while held, six materials)
+ *   Layout Tine    the white keys are the tines in the kalimba's V (Scale, Key); the black keys follow
+ *                  Black: Chords (a thumb roll of the scale's chords), Sharps (the white key's tine a
+ *                  semitone up) or Perform (palm mute, hole, freeze, octave down / up while held,
+ *                  six materials)
+ *   Layout Keyboard every key, white and black, plays its printed note (F3 on the lowest), shifted
+ *                  by Transpose (and the octave): a chromatic kalimba with a tine per key
  *   PLAY freeze the grains     REC palm mute (every tine)     ARP Release: Ring / Damp
  *   OCT- / OCT+    the octave
  *   HOME ENV FX LFO SEL SEQ GLO   the pages: Tine, Body, Space, Grain, Keys, More, Setup (EDIT: the next)
- *   SELECT material   ALGORITHM scale   PRESETS key   KNOB 1-4 the page's four values
+ *   SELECT material   ALGORITHM scale   PRESETS key (Tine) / transpose (Keyboard)   KNOB 1-4 the page's values
  *   SAVE           saves (it also saves by itself, a few seconds after a change, when quiet) */
 
 enum { V_TINE, V_BODY, V_SPACE, V_GRAIN, V_KEYS, V_MORE, V_SETUP, NVIEWS };
@@ -24,6 +26,10 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_FEEDBACK, P_GSPRAY, P_STRUM, P_RELEASE},
     {P_TUNE, P_MIDICH, P_MIDIOUT, P_WIDTH},
 };
+
+#define K_NONE 255                     /* a knob with nothing on it */
+/* the Keys page follows the layout: Keyboard has no scale, key or black-key mode, but a transpose */
+static const uint8_t KEYS_KEYBOARD[4] = {P_LAYOUT, P_TRANSPOSE, P_OCTAVE, K_NONE};
 
 #define NWHITE KM_NWHITE
 #define NBLACK KM_NBLACK
@@ -153,16 +159,27 @@ static int32_t accel(int role, int32_t s, int range)
 static void turn(int role, int k, int32_t e)
 {
     const km_param_t *p = km_param_info(k);
-    if (!e)
+    if (!e || k == K_NONE)
         return;
     knob_set(k, proj.par[k] + accel(role, e, p->hi - p->lo));
 }
 
 /* ------------------------------------------------------------- tines --- */
 static int octave_now(void) { return proj.par[P_OCTAVE] + ui.oct_shift; }
+static int keyboard(void) { return proj.par[P_LAYOUT] == LAY_KEYBOARD; }
+/* Keyboard layout: the note of key k (0..26), as printed, transposed */
+static int key_cents(int k) { return km_keyboard_cents(proj.par[P_TRANSPOSE], octave_now(), k); }
+static int key_pan(int k) { return (k - 13) * 100 / 13; }       /* across the keyboard, left to right */
 static int white_cents(int w)
 {
+    if (keyboard())
+        return key_cents(WHITE_K[w & 15]);
     return km_white_cents(proj.par[P_LAYOUT], proj.par[P_SCALE], proj.par[P_KEY], octave_now(), w);
+}
+static int white_pan(int w) { return keyboard() ? key_pan(WHITE_K[w & 15]) : (int)(km_white_pos(w) * 100.0f); }
+static int view_knob(int i)
+{
+    return ui.view == V_KEYS && keyboard() ? KEYS_KEYBOARD[i] : VIEW_KNOB[ui.view][i];
 }
 static int midi_ch(void) { return proj.par[P_MIDICH] ? proj.par[P_MIDICH] - 1 : 0; }
 static uint8_t cents_note(int c) { int n = (c + 50) / 100; return (uint8_t)(n < 0 ? 0 : n > 127 ? 127 : n); }
@@ -209,12 +226,16 @@ static void set_freeze(int on)
 
 static void white_down(int w)
 {
-    key_pluck(WHITE_K[w], white_cents(w), 100, (int)(km_white_pos(w) * 100.0f), 0);
+    key_pluck(WHITE_K[w], white_cents(w), 100, white_pan(w), 0);
 }
 
 static void black_down(int b)
 {
     int k = BLACK_K[b];
+    if (keyboard()) {                                /* its own note */
+        key_pluck(k, key_cents(k), 100, key_pan(k), 0);
+        return;
+    }
     switch (proj.par[P_BLACK]) {
     case BLK_CHORDS: {
         int c[4], n = km_chord_cents(proj.par[P_SCALE], proj.par[P_KEY], octave_now(), b, c), i;
@@ -224,7 +245,7 @@ static void black_down(int b)
     }
     case BLK_SHARPS: {
         int w = BLACK_LEFT[b];
-        key_pluck(k, white_cents(w) + 100, 100, (int)(km_white_pos(w) * 100.0f), 0);
+        key_pluck(k, white_cents(w) + 100, 100, white_pan(w), 0);
         break;
     }
     default:                                         /* Perform */
@@ -246,7 +267,7 @@ static void black_down(int b)
 
 static void black_up(int b)
 {
-    if (proj.par[P_BLACK] == BLK_PERFORM) {
+    if (!keyboard() && proj.par[P_BLACK] == BLK_PERFORM) {
         if (b == PF_HOLE)
             km_hole(HOLE_KEY, 0);
         else if (b == PF_OCTDN || b == PF_OCTUP)
@@ -302,9 +323,15 @@ static void button(int b)
 static int midi_pan(int cents)
 {
     int w;
-    for (w = 0; w < NWHITE; w++)
-        if (white_cents(w) == cents)
-            return (int)(km_white_pos(w) * 100.0f);
+    if (keyboard()) {
+        for (w = 0; w < NKEYS; w++)
+            if (key_cents(w) == cents)
+                return key_pan(w);
+    } else {
+        for (w = 0; w < NWHITE; w++)
+            if (white_cents(w) == cents)
+                return white_pan(w);
+    }
     return ((cents / 100) & 1) ? 40 : -40;
 }
 
@@ -401,12 +428,17 @@ static void input(void)
         say_param(P_SCALE);
     }
     if ((e = plat_enc(EN_PRESET)) != 0) {
-        knob_set(P_KEY, (proj.par[P_KEY] + (e > 0 ? 1 : 11)) % 12);
-        say_param(P_KEY);
+        if (keyboard()) {
+            knob_set(P_TRANSPOSE, proj.par[P_TRANSPOSE] + (e > 0 ? 1 : -1));
+            say_param(P_TRANSPOSE);
+        } else {
+            knob_set(P_KEY, (proj.par[P_KEY] + (e > 0 ? 1 : 11)) % 12);
+            say_param(P_KEY);
+        }
     }
     for (i = 0; i < 4; i++)
         if ((e = plat_enc(EN_K1 + (int)i)) != 0) {
-            turn(EN_K1 + (int)i, VIEW_KNOB[ui.view][i], e);
+            turn(EN_K1 + (int)i, view_knob((int)i), e);
             ui.touched = (int8_t)i;
             ui.touch_until = plat_ms() + 1200u;
             ui.act_t = plat_ms();
@@ -460,7 +492,8 @@ static void draw_header(void)
     int msg = plat_ms() < ui.msg_until;
     uint32_t h = hash(hash(2166136261u, ui.view | (uint32_t)ui.frozen << 8 | (uint32_t)proj.par[P_RELEASE] << 9 |
                                             (uint32_t)ui.dirty << 10 | (uint32_t)msg << 11),
-                      (uint32_t)proj.par[P_KEY] | (uint32_t)proj.par[P_SCALE] << 4 | (uint32_t)proj.par[P_MATERIAL] << 12);
+                      (uint32_t)proj.par[P_KEY] | (uint32_t)proj.par[P_SCALE] << 4 | (uint32_t)proj.par[P_MATERIAL] << 12 |
+                          (uint32_t)proj.par[P_LAYOUT] << 16 | (uint32_t)(proj.par[P_TRANSPOSE] + 12) << 18);
     if (msg)
         h = hash(hash(h, (uint32_t)ui.msg[0][0] << 8 | ui.msg[0][1]), ui.msg_until);
     if (ui.view == V_SETUP)
@@ -488,6 +521,15 @@ static void draw_header(void)
             cv_text(x - text_w(&FONT_S, t), 6, &FONT_S, t, K_DIM);
             x -= text_w(&FONT_S, t) + 6;
             cv_text(x - text_w(&FONT_S, "CPU"), 6, &FONT_S, "CPU", K_DIM);
+        } else if (keyboard()) {                     /* "Keyboard", "Keyboard +2" */
+            s_cpy(t, "Keyboard");
+            if (proj.par[P_TRANSPOSE]) {
+                w = s_len(t);
+                t[w++] = ' ';
+                km_param_text(P_TRANSPOSE, proj.par[P_TRANSPOSE], t + w);
+            }
+            x -= text_w(&FONT_S, t);
+            cv_text(x, 6, &FONT_S, t, K_TEXT);
         } else {
             char s[16];
             km_param_text(P_KEY, proj.par[P_KEY], t);
@@ -545,6 +587,8 @@ static void draw_kalimba(void)
     for (w = 0; w < NWHITE; w++)
         if (white_cents(w) < cmin)
             cmin = white_cents(w);
+    if (keyboard() && key_cents(0) < cmin)
+        cmin = key_cents(0);
     if (body != BODY_NONE)
         cv_round(2, y0 - 6, 236, 104, 6, body == BODY_GOURD ? RGB(176, 120, 64) : K_WOOD);
     if (body == BODY_BOX || body == BODY_GOURD) {
@@ -571,8 +615,23 @@ static void draw_kalimba(void)
             char n[2] = {nm[0], 0};
             text_c(tx + 5, y0 + bridge + h - 14, &FONT_XS, n, nm[1] ? K_ACC : K_TEXT);
         }
-        if (((c - 100 * proj.par[P_KEY]) % 1200 + 1200) % 1200 == 0)
-            cv_round(tx + 3, y0 + bridge + 6, 4, 4, 2, K_TEXT);   /* the tonic: engraved, as on a real one */
+        if (((c - 100 * (keyboard() ? 0 : proj.par[P_KEY])) % 1200 + 1200) % 1200 == 0)
+            cv_round(tx + 3, y0 + bridge + 6, 4, 4, 2, K_TEXT);   /* the tonic (Keyboard: the Cs), engraved */
+    }
+    if (keyboard()) {   /* the black keys' tines: a second, narrower row in the gaps, as a chromatic kalimba */
+        uint16_t dark = mix(metal, K_TEXT, 6);
+        int b;
+        for (b = 0; b < NBLACK; b++) {
+            int c = key_cents(BLACK_K[b]), yy;
+            float lv = tine_level(c), len = 84.0f * fm_exp2f((float)(cmin - c) * (1.0f / 2400.0f));
+            int t = (int)(lv * 16.0f + 0.5f), amp = (int)(lv * 2.0f), h = (int)len < 22 ? 22 : (int)len - 4;
+            uint16_t col = mix(dark, K_ACC, t > 16 ? 16 : t);
+            tx = 10 + BLACK_LEFT[b] * 14 + 10;
+            if (amp && (ui.frame & 1u))
+                amp = -amp;
+            for (yy = 0; yy < h; yy++)
+                cv_rect(tx + yy * amp / h, y0 + bridge + yy, 4, 1, col);
+        }
     }
 }
 
@@ -584,10 +643,10 @@ static void draw_black(int32_t y0)
         int32_t x = 4 + b * 20 + ((b >= 3) + (b >= 5) + (b >= 8) + (b >= 10)) * 3;   /* grouped as the keys are */
         int on = (ui.keys >> BLACK_K[b] & 1u) != 0;
         uint16_t bg = K_BLUE_T, fg = K_TEXT;
-        switch (proj.par[P_BLACK]) {
+        switch (keyboard() ? BLK_SHARPS : proj.par[P_BLACK]) {
         case BLK_CHORDS: km_chord_name(proj.par[P_SCALE], proj.par[P_KEY], b, t); break;
-        case BLK_SHARPS: {
-            int c = white_cents(BLACK_LEFT[b]) + 100;
+        case BLK_SHARPS: {                            /* (Keyboard: the key's own note) */
+            int c = keyboard() ? key_cents(BLACK_K[b]) : white_cents(BLACK_LEFT[b]) + 100;
             const char *n = KM_NOTE_NAME[((c + 50) / 100) % 12];
             s_cpy(t, n);
             break;
@@ -620,7 +679,8 @@ static void draw_main(void)
     uint32_t h = hash(2166136261u, (uint32_t)proj.par[P_LAYOUT] | (uint32_t)proj.par[P_SCALE] << 4 |
                                        (uint32_t)proj.par[P_KEY] << 8 | (uint32_t)(octave_now() + 4) << 12 |
                                        (uint32_t)proj.par[P_BLACK] << 16 | (uint32_t)proj.par[P_MATERIAL] << 20 |
-                                       (uint32_t)proj.par[P_BODY] << 24 | (uint32_t)ui.frozen << 28);
+                                       (uint32_t)proj.par[P_BODY] << 24 | (uint32_t)ui.frozen << 28) ^
+                 (uint32_t)(proj.par[P_TRANSPOSE] + 12) * 2654435761u;
     int v;
     int ringing = 0;
     for (v = 0; v < KM_NVOICE; v++) {
@@ -644,7 +704,7 @@ static void draw_knobs(void)
     uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8), i;
     int now_touch = plat_ms() < ui.touch_until;
     for (i = 0; i < 4; i++)
-        h = hash(h, (uint32_t)proj.par[VIEW_KNOB[ui.view][i]]);
+        h = hash(h, view_knob((int)i) == K_NONE ? 0xFFFFu : (uint32_t)proj.par[view_knob((int)i)] | (uint32_t)view_knob((int)i) << 16);
     h = hash(h, (uint32_t)now_touch);
     if (h == ui.sig[2])
         return;
@@ -652,12 +712,17 @@ static void draw_knobs(void)
     cv_begin(240, KNB_H, K_BG);
     cv_round(4, 2, 232, KNB_H - 6, 6, K_PANEL);
     for (i = 0; i < 4; i++) {
-        int k = VIEW_KNOB[ui.view][i], lo = km_param_info(k)->lo, hi = km_param_info(k)->hi, v = proj.par[k];
+        int k = view_knob((int)i), lo, hi, v;
         int32_t x = (int32_t)i * 60, cx = x + 30, bw;
         int hot = now_touch && ui.touched == (int)i;
         char t[16];
         if (i)
             cv_rect(x, 14, 1, KNB_H - 30, K_LINE);
+        if (k == K_NONE)
+            continue;
+        lo = km_param_info(k)->lo;
+        hi = km_param_info(k)->hi;
+        v = proj.par[k];
         text_c(cx, 6, &FONT_XS, km_param_info(k)->name, hot ? K_TEXT : K_DIM);
         km_param_text(k, v, t);
         {   /* the value: big, unless it has lower case (the big face has none) or is long */
@@ -689,11 +754,17 @@ static void leds(void)
         b |= 1u << B_PLAY;
     if (proj.par[P_RELEASE])
         b |= 1u << B_ARP;
-    for (i = 0; i < NWHITE; i++)                     /* the tines that ring */
-        if (tine_level(white_cents((int)i)) > 0.08f)
-            k |= 1u << WHITE_K[i];
+    if (keyboard()) {
+        for (i = 0; i < NKEYS; i++)                  /* the tines that ring, every key */
+            if (tine_level(key_cents((int)i)) > 0.08f)
+                k |= 1u << i;
+    } else {
+        for (i = 0; i < NWHITE; i++)
+            if (tine_level(white_cents((int)i)) > 0.08f)
+                k |= 1u << WHITE_K[i];
+    }
     k |= ui.keys;
-    if (proj.par[P_BLACK] == BLK_PERFORM) {
+    if (!keyboard() && proj.par[P_BLACK] == BLK_PERFORM) {
         if (ui.frozen)
             k |= 1u << BLACK_K[PF_FREEZE];
         k |= 1u << BLACK_K[PF_MAT0 + proj.par[P_MATERIAL]];

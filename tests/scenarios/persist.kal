@@ -18,19 +18,17 @@ expect store_writes 2
 expect dirty 0
 reboot
 expect par3 25
-# layouts and scales: Linear in A minor pentatonic, Split
+# a scale and a key on the Tine layout: A minor pentatonic, A3 in the middle, C4 right of it
 tap SEL
-spin K1 1
-expect par16 1
 spin K2 3
 spin K3 9
-expect white0 5700
-expect white1 6000
-spin K1 1
-expect par16 2
-expect white8 5700
-expect white0 4500
-shot split.png
+expect par17 3
+expect par18 9
+expect white7 5700
+expect white8 6000
+tap SAVE
+reboot
+expect par18 9
 # live grains don't hold autosave back (they never stop spawning while Grains is up)...
 tap LFO
 spin K1 30

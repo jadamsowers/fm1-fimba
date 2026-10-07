@@ -21,15 +21,14 @@ USB, storage and installer.
 
 | | |
 |---|---|
-| White keys | The tines. **Layout** (Keys page) sets their order: **Tine** is the kalimba's V (C4 in the middle, D4 right of it, E4 left, up to D6 on the right edge), **Linear** goes up the scale from left to right, and **Split** puts the same eight degrees in each hand with the left an octave down. |
-| Black keys | Set by **Black** (Keys page). See below. |
+| Layout | Two, on the Keys page. **Tine** (the default) is a kalimba: the white keys are the tines in the kalimba's V (C4 in the middle, D4 right of it, E4 left, up to D6 on the right edge), in the Scale and Key you choose, and the black keys do what **Black** says (below). **Keyboard** is a chromatic kalimba with a tine per key: every key, white and black, plays its printed note, F3 on the lowest up to G5, shifted by **Transpose** (±12 semitones) and the octave. |
 | PLAY | Freezes the grains, so the cloud keeps playing what's in its buffer. Press again for live. |
 | REC | Palm mute: damps every tine. |
 | ARP | **Release**: *Ring* (a tine rings on after you let go, as on a real kalimba) or *Damp* (letting go puts a finger on it). |
 | OCT− / OCT+ | Octave. |
 | SELECT | Material. |
 | ALGORITHM | Scale. |
-| PRESETS | Key. |
+| PRESETS | Key (Tine) or Transpose (Keyboard). |
 | KNOB 1–4 | The four values on the screen. |
 | HOME ENV FX LFO SEL SEQ GLO | The pages (EDIT steps through them). |
 | SAVE | Saves. It also saves by itself a few seconds after a change, once everything is quiet. |
@@ -38,7 +37,10 @@ USB, storage and installer.
 The keys aren't velocity-sensitive (the FM-1 reports on and off only), so keys pluck at a fixed
 strength. **Hardness** sets how hard that is, and over MIDI velocity does.
 
-### The black keys
+### The black keys (Tine layout)
+
+In the Keyboard layout the black keys simply play their notes. In the Tine layout they follow
+**Black**:
 
 - **Chords**: each key rolls a chord across the tines the way a thumb slides over them: root,
   third, fifth and the octave, **Strum ms** apart. The first seven keys are the triads on the
@@ -66,7 +68,7 @@ strength. **Hardness** sets how hard that is, and over MIDI velocity does.
 - **FX, Space**: Reverb, Size, Delay (echo level), Time (40–740 ms, ping-pong).
 - **LFO, Grain**: Grains (level), Grain ms (20–500), Density (grains/s), Pitch (−12, −7, 0, +7,
   +12, +19, Shimmer = unison/fifth/octave at random, Reverse).
-- **SEL, Keys**: Layout, Scale, Key, Black.
+- **SEL, Keys**: Layout, Scale, Key, Black in the Tine layout; Layout, Transpose, Octave in Keyboard.
 - **SEQ, More**: Feedback (delay), Spray (grain position, timing, detune and pan scatter), Strum ms,
   Release.
 - **GLO, Setup**: Tune (±50 cents), MIDI ch (Omni or 1–16), MIDI out, Width. The header shows the

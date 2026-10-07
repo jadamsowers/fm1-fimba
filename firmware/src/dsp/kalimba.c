@@ -21,7 +21,7 @@ static const km_param_t PARAMS[P_NPARAMS] = {
     {"Layout", 0, LAY_N - 1, LAY_TINE}, {"Scale", 0, KM_NSCALE - 1, 0}, {"Key", 0, 11, 0}, {"Black", 0, BLK_N - 1, BLK_CHORDS},
     {"Feedback", 0, 95, 45}, {"Spray", 0, 100, 30}, {"Strum ms", 0, 120, 30}, {"Release", 0, 1, 0},
     {"Tune", -50, 50, 0}, {"MIDI ch", 0, 16, 0}, {"MIDI out", 0, 1, 1}, {"Width", 0, 100, 70},
-    {"Octave", -2, 2, 0},
+    {"Octave", -2, 2, 0}, {"Transpose", -12, 12, 0},
 };
 const km_param_t *km_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -79,26 +79,17 @@ static int tonic(int key, int octave) { return 6000 + 100 * (key >= 6 ? key - 12
 /* Tine: the kalimba's own layout, the longest (lowest) tine in the middle and the scale alternating
  * outward, left right left right, so each thumb has every other note and thirds lie side by side:
  *   w:      0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
- *   degree 14  12  10   8   6   4   2   0   1   3   5   7   9  11  13  15
- * Linear: up the scale, left to right, as a keyboard. Split: the same eight degrees in each hand,
- * the left an octave down (both thumbs, octaves apart). */
-static int white_degree(int layout, int w, int *oct)
-{
-    *oct = 0;
-    if (layout == LAY_TINE)
-        return w <= 7 ? 2 * (7 - w) : 2 * (w - 8) + 1;
-    if (layout == LAY_SPLIT) {
-        *oct = w < 8 ? -1 : 0;
-        return w & 7;
-    }
-    return w;
-}
+ *   degree 14  12  10   8   6   4   2   0   1   3   5   7   9  11  13  15 */
+static int white_degree(int w) { return w <= 7 ? 2 * (7 - w) : 2 * (w - 8) + 1; }
 
 int km_white_cents(int layout, int scale, int key, int octave, int w)
 {
-    int o, d = white_degree(layout, w & 15, &o);
-    return tonic(key, octave + o) + km_degree_cents(scale, d);
+    (void)layout;                                 /* the Keyboard layout plays km_keyboard_cents */
+    return tonic(key, octave) + km_degree_cents(scale, white_degree(w & 15));
 }
+
+/* Keyboard: the FM-1's keys as printed, F3 (MIDI 53) on the lowest, chromatic up to G5 */
+int km_keyboard_cents(int transpose, int octave, int k) { return 5300 + 100 * (k + transpose) + 1200 * octave; }
 
 float km_white_pos(int w) { return ((float)(w & 15) - 7.5f) * (1.0f / 7.5f); }
 
@@ -176,7 +167,7 @@ void km_param_text(int i, int v, char *b)
 {
     static const char *const ONOFF[2] = {"Off", "On"};
     static const char *const BODY[BODY_N] = {"None", "Board", "Box", "Gourd"};
-    static const char *const LAY[LAY_N] = {"Tine", "Linear", "Split"};
+    static const char *const LAY[LAY_N] = {"Tine", "Keyboard"};
     static const char *const BLK[BLK_N] = {"Chords", "Sharps", "Perform"};
     static const char *const GP[GP_N] = {"-12", "-7", "0", "+7", "+12", "+19", "Shimmer", "Reverse"};
     static const char *const REL[2] = {"Ring", "Damp"};
@@ -202,7 +193,7 @@ void km_param_text(int i, int v, char *b)
             return;
         }
         break;
-    case P_TUNE: case P_OCTAVE:
+    case P_TUNE: case P_OCTAVE: case P_TRANSPOSE:
         if (v > 0)
             *b++ = '+';
         break;
