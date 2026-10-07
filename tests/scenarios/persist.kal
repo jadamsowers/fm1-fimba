@@ -46,3 +46,11 @@ expect dirty 1
 tap PLAY
 wait 6000
 expect dirty 0
+# a project saved by the version before Color and Pattern (format 1): its settings kept, the new ones at
+# their defaults (Glide 30, not the 0 its spare bytes hold; Tempo 96)
+oldproject
+reboot
+expect par0 2
+expect par36 30
+expect par35 96
+expect par30 0

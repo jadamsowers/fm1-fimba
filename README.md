@@ -24,13 +24,13 @@ USB, storage and installer.
 | Layout | Two, on the Keys page. **Tine** (the default) is a kalimba: the white keys are the tines in the kalimba's V (C4 in the middle, D4 right of it, E4 left, up to D6 on the right edge), in the Scale and Key you choose, and the black keys do what **Black** says (below). **Keyboard** is a chromatic kalimba with a tine per key: every key, white and black, plays its printed note, F3 on the lowest up to G5, shifted by **Transpose** (±12 semitones) and the octave. |
 | PLAY | Freezes the grains, so the cloud keeps playing what's in its buffer. Press again for live. |
 | REC | Palm mute: damps every tine. |
-| ARP | **Release**: *Ring* (a tine rings on after you let go, as on a real kalimba) or *Damp* (letting go puts a finger on it). |
+| ARP | The **mbira pattern** on and off (see Patterns below). |
 | OCT− / OCT+ | Octave. |
 | SELECT | Material. |
 | ALGORITHM | Scale. |
 | PRESETS | Key (Tine) or Transpose (Keyboard). |
 | KNOB 1–4 | The four values on the screen. |
-| HOME ENV FX LFO SEL SEQ GLO | The pages (EDIT steps through them). |
+| HOME ENV FX LFO SEL SEQ GLO | The pages. EDIT steps through them, and on to two more that have no button: **Color** and **Pattern**. |
 | SAVE | Saves. It also saves by itself a few seconds after a change, once everything is quiet. |
 | OCT− + OCT+ held 5 s | Update mode (Felucca's). Held at power-on: hardware calibration. |
 
@@ -70,9 +70,38 @@ In the Keyboard layout the black keys simply play their notes. In the Tine layou
   +12, +19, Shimmer = unison/fifth/octave at random, Reverse).
 - **SEL, Keys**: Layout, Scale, Key, Black in the Tine layout; Layout, Transpose, Octave in Keyboard.
 - **SEQ, More**: Feedback (delay), Spray (grain position, timing, detune and pan scatter), Strum ms,
-  Release.
+  Release (*Ring*: a tine rings on after you let go, as on a real kalimba; *Damp*: letting go puts a
+  finger on it).
 - **GLO, Setup**: Tune (±50 cents), MIDI ch (Omni or 1–16), MIDI out, Width. The header shows the
   audio CPU load and any dropouts, so you can check the load on the hardware.
+- **EDIT, Color**: Tape (wow, flutter and saturation on the whole sound: the pitch wavers up to about
+  12 cents), Lo-fi (a cheaper machine: the top rolls off, the image narrows, and there's hiss that
+  follows the music down to silence), Chorus (a slow stereo ensemble on the instrument), Filter
+  (one knob: left of centre a low-pass sweeping down to about 200 Hz, right a high-pass up to about
+  4 kHz, more resonant the further it goes; centre is off). Each fades in and out without a click.
+- **EDIT, Pattern**: Pattern, Tempo (40–200), Glide, Tuning. **Glide**: a hard pluck starts up to
+  40 cents sharp and settles in about 50 ms, as a real tine does when it swings wide. **Tuning**:
+  *Equal*, or *Just* (pure 5-limit intervals over the key in Tine, over the C key in Keyboard; the
+  Mbira scale keeps its own tuning).
+
+### Patterns
+
+ARP plays mbira-style patterns over a chord: a cycle of 12 pulses, three to a beat, with the left
+thumb's bass tines (the chord's root and fifth an octave down) panned left and the right thumb's
+treble panned right. The first pulse of each cycle is accented, and no two plucks are quite the same
+strength.
+
+- **Thumbs**: left and right in turn, the bass under a treble line that rises and falls.
+- **Cascade**: down the tines, into the bass, and back up.
+- **3 over 2**: the bass every three pulses against the treble every two.
+- **Interlock**: two parts woven together, the second answering between the first's notes, six
+  pulses on and a tine higher (the way mbira players pair a lead part with an interlocking one).
+
+The chord comes from a chord key (Tine layout, Black on Chords: the key sets the chord without its
+roll), the keys you hold (Keyboard layout), or the MIDI notes you hold. It keeps playing after you let
+go, until you pick another chord. In the Tine layout the white keys still play over it. With nothing
+picked yet it plays the key's own chord. Tempo is on the Pattern page; MIDI clock takes over while it
+comes in (start resets the cycle, stop pauses it).
 
 ### Materials
 
@@ -108,6 +137,8 @@ MIDI comes in over USB and the TRS jack, on the channel set on Setup (Omni by de
 - **Program change**: material (0–5, wrapping).
 - **Pitch bend**: ±2 semitones, on every ringing tine.
 - **CC120 / CC123**: damp everything.
+- **Clock** (start, stop, continue and ticks, on any channel): the pattern follows it.
+- With the pattern on, held notes are its chord instead of being plucked.
 - **Out** (on by default): the keys as notes, on the Setup channel (1 when Omni).
 
 ## Building and testing

@@ -1,0 +1,115 @@
+# the mbira patterns (ARP) and the Color page
+# (params: 0 Material 19 Black 16 Layout 30 Tape 31 Lo-fi 32 Chorus 33 Filter 34 Pattern 35 Tempo 36 Glide
+#  37 Tuning)
+wav pattern.wav
+expect pat 0
+tap ARP
+expect pat 3
+expect pool 3
+# on its own, it plays over the key's chord at once: C E G in C major, bass and treble
+wait 1500
+expect voices >3
+expect tine4800 >1
+# a chord key (Tine layout, Chords mode) picks the chord, without its roll
+key b4 down
+wait 30
+expect pool 3
+key b4 up
+wait 1200
+expect tine5500 >1
+# the seventh keys give four notes
+tapkey b9
+expect pool 4
+wait 50
+leds
+# EDIT to the Pattern page: Pattern, Tempo, Glide, Tuning
+tap GLO
+tap EDIT
+tap EDIT
+expect view 8
+spin K1 3
+expect par34 3
+spin K2 40
+expect par35 136
+wait 1500
+shot pattern_running.png
+spin K1 -3
+# the white keys still play over it (Tine layout)
+tapkey w7
+wait 20
+expect tine6000 >5
+tap ARP
+expect pat 0
+# MIDI clock leads: 8 ticks a pulse
+tap ARP
+midi FA 00 00
+midi F8 00 00
+wait 5
+expect ext 1
+tap ARP
+# just intonation: E over C is 386 cents up, not 400
+spin K4 1
+expect par37 1
+tap SEL
+spin K4 1
+expect par19 1
+expect white6 6386
+expect white7 6000
+tapkey w6
+wait 30
+expect tine6386 >5
+tap GLO
+tap EDIT
+tap EDIT
+spin K4 -1
+expect par37 0
+expect white6 6400
+# the Keyboard layout with the pattern: the keys held are its chord
+tap SEL
+spin K1 1
+expect par16 1
+tap ARP
+key w0 down
+key w2 down
+key b1 down
+wait 30
+expect pool 3
+key w0 up
+key w2 up
+key b1 up
+wait 800
+# (Thumbs: the bass is the lowest note an octave down, F2)
+expect tine4100 >1
+# a new hand of keys starts a new chord
+key w4 down
+wait 20
+expect pool 1
+key w4 up
+tap ARP
+# the Color page: tape, lo-fi, chorus, filter
+tap GLO
+tap EDIT
+expect view 7
+spin K1 60
+spin K2 40
+spin K3 50
+spin K4 -50
+expect par30 60
+expect par31 40
+expect par32 50
+expect par33 -50
+tapkey w7
+tapkey w9
+wait 600
+shot color_on.png
+spin K4 100
+expect par33 50
+wait 300
+spin K1 -60
+spin K2 -40
+spin K3 -50
+spin K4 -50
+wait 1500
+wavstop
+expect peak_db_max -0.1
+expect dropped 0

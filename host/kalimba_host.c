@@ -22,10 +22,11 @@
  *   leds                         print the lit buttons and keys
  *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
  *                                (WHAT: view dirty frozen store_writes midi_out voices grains hole octshift
- *                                 dropped parN whiteW (cents of white key W) keyK (cents of key K, Keyboard
+ *                                 dropped pat pool pulse ext parN whiteW (cents of white key W) keyK (cents of key K, Keyboard
  *                                 layout) tineC (level x100 of the tine at
  *                                 C cents) peak_db_max peak_db_min)
  *   reboot                       re-run boot from the simulated flash (persistence test)
+ *   oldproject                   put a format 1 project (Material 2) in the simulated flash
  */
 #define OM_HOST 1
 #include <stdio.h>
@@ -377,6 +378,14 @@ static int expect(const char *what, const char *val)
         got = ui.oct_shift;
     else if (!strcmp(what, "dropped"))
         got = (int)km_dropped;
+    else if (!strcmp(what, "pat"))                /* the pattern: 3 = the UI and the engine agree it runs */
+        got = ui.pat_on + 2 * km_pat_on;
+    else if (!strcmp(what, "pool"))
+        got = ui.pool_n;
+    else if (!strcmp(what, "pulse"))
+        got = km_pat_pulse;
+    else if (!strcmp(what, "ext"))
+        got = km_ext;
     else if (!strncmp(what, "par", 3))            /* parN: parameter N (kalimba.h P_*) */
         got = proj.par[atoi(what + 3)];
     else if (!strncmp(what, "white", 5))          /* whiteW: the cents white key W plays now */
@@ -526,7 +535,13 @@ int main(int argc, char **argv)
             printf("\n");
         } else if (!strcmp(cmd, "expect"))
             fails += expect(a, b);
-        else if (!strcmp(cmd, "reboot")) {
+        else if (!strcmp(cmd, "oldproject")) {   /* a format 1 project in the store, as 0.1 saved it */
+            project_defaults();
+            proj.format = 1u;
+            memset(proj.par + PROJ_FORMAT1_NPAR, 0, sizeof proj.par - PROJ_FORMAT1_NPAR * sizeof proj.par[0]);
+            proj.par[P_MATERIAL] = 2;
+            plat_store_save(OBJ_PROJ, &proj, 8u + 2u * PROJ_FORMAT1_NPAR + 32u);
+        } else if (!strcmp(cmd, "reboot")) {
             memset(&proj, 0, sizeof proj);
             boot();
         } else if (!strcmp(cmd, "echo"))

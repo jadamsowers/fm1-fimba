@@ -22,12 +22,13 @@ static float bufl[MAXS], bufr[MAXS];
 /* render n frames into bufl / bufr from offset at; peak and NaN check */
 static float peak;
 static int nan_seen;
+static uint32_t master = 4096 / 2;                /* the MASTER pot, Q12 */
 static void render(uint32_t at, uint32_t n)
 {
     uint32_t k;
     while (n) {
         uint32_t m = n > 256 ? 256 : n;
-        km_render(blk, m, 4096 / 2);
+        km_render(blk, m, master);
         for (k = 0; k < m; k++) {
             float l = (float)blk[2 * k] / 8388608.0f, r = (float)blk[2 * k + 1] / 8388608.0f;
             if (l != l || r != r)
@@ -468,6 +469,16 @@ static void body_measure(int body, float *loud, float *bright, float *low)
     *low = 10.0f * fm_log2f(lo / e) * 0.30103f;
 }
 
+/* the sharpest edge (fourth difference) in bufl[a, a+n) */
+static float edge_max(uint32_t a, uint32_t n)
+{
+    uint32_t i;
+    float m = 0.0f;
+    for (i = a + 4; i < a + n; i++)
+        m = fm_maxf(m, fm_fabsf(bufl[i] - 4.0f * bufl[i - 1] + 6.0f * bufl[i - 2] - 4.0f * bufl[i - 3] + bufl[i - 4]));
+    return m;
+}
+
 static void test_bodies(void)
 {
     float l[BODY_N], b[BODY_N], lo[BODY_N];
@@ -481,6 +492,294 @@ static void test_bodies(void)
           (double)b[BODY_BOX], (double)b[BODY_GOURD]);
     CHECK(lo[BODY_GOURD] > lo[BODY_BOARD] + 3.0f && lo[BODY_BOX] > lo[BODY_BOARD] + 3.0f,
           "low end: board %.1f, box %.1f, gourd %.1f dB", (double)lo[BODY_BOARD], (double)lo[BODY_BOX], (double)lo[BODY_GOURD]);
+}
+
+/* What a pluck adds to what was already sounding: the session rendered twice, with and without it
+ * (the engine is deterministic: no nail noise at Hardness 0, no grains, no buzz), the difference kept.
+ * That is the new pluck, plus whatever happened to the tine it stole or plucked again. Its sharpest
+ * edge, by the fourth difference: a pop (a step, a corner) keeps it, a tone hardly does (a fading low
+ * tine by its frequency^4: ~1e-6 of its level), so a pop is an edge far sharper than a soft pluck's. */
+static float with_out[44100];
+static int corner_glide;                           /* Glide for pluck_corner (0: the mechanisms alone) */
+static float pluck_corner(int n_ring, int ring_from, int ring_vel, int cents, int vel)
+{
+    int pass, i;
+    float m = 0.0f;
+    for (pass = 0; pass < 2; pass++) {
+        fresh();
+        km_set(P_HARD, 0);
+        km_set(P_DECAY, 100);
+        km_set(P_GLIDE, corner_glide);
+        for (i = 0; i < n_ring; i++)
+            km_pluck(ring_from + 100 * i, ring_vel, 0, 0);
+        render(0, 22050);
+        if (pass)
+            km_pluck(cents, vel, 0, 20);         /* 20 ms in: the moment it lands is inside the window */
+        render(0, 8820);
+        if (!pass)
+            for (i = 0; i < 8820; i++)
+                with_out[i] = bufl[i];
+    }
+    for (i = 4; i < 8820; i++) {                 /* (MASTER low: the output's limiter stays linear) */
+        float d[5];
+        int k;
+        for (k = 0; k < 5; k++)
+            d[k] = bufl[i - k] - with_out[i - k];
+        m = fm_maxf(m, fm_fabsf(d[0] - 4.0f * d[1] + 6.0f * d[2] - 4.0f * d[3] + d[4]));
+    }
+    return m;
+}
+
+/* no pops: a stolen voice fades out, a re-plucked tine is damped by the thumb through its own decay;
+ * either way no sharper than the same soft pluck on a free tine (they were a cut and a step) */
+static void test_no_pops(void)
+{
+    float alone, steal, again, fresh_tine;
+    master = 4096 / 16;
+    alone = pluck_corner(0, 0, 0, 8400, 50);
+    steal = pluck_corner(KM_NVOICE, 4300, 127, 8400, 50);              /* twelve ring: one is stolen */
+    again = pluck_corner(1, 6000, 127, 6000, 50);                      /* a loud tine plucked again, softly */
+    fresh_tine = pluck_corner(1, 6000, 127, 6100, 50);                 /* the same, on the tine beside it */
+    CHECK(steal < alone * 3.0f, "a stolen voice pops: edge %.6f, the pluck alone %.6f", (double)steal, (double)alone);
+    CHECK(again < fresh_tine * 3.0f, "a re-plucked tine pops: edge %.6f, a fresh tine %.6f", (double)again, (double)fresh_tine);
+    printf("  edges: pluck alone %.6f, stealing %.6f | fresh tine %.6f, plucked again %.6f\n", (double)alone,
+           (double)steal, (double)fresh_tine, (double)again);
+    /* the glide settles in a step a chunk: on a loud ringing tine plucked again, each leaves a trace of an
+     * edge (~1e-6 at full scale per step): bounded at full Glide far below the old pops (0.07, 0.009) */
+    corner_glide = 100;
+    again = pluck_corner(1, 6000, 127, 6000, 50);
+    fresh_tine = pluck_corner(1, 6000, 127, 6100, 50);
+    corner_glide = 0;
+    CHECK(again < fresh_tine * 10.0f, "Glide 100 on a re-plucked tine: edge %.6f, a fresh tine %.6f", (double)again,
+          (double)fresh_tine);
+    printf("  glide 100: fresh tine %.6f, plucked again %.6f\n", (double)fresh_tine, (double)again);
+    master = 4096 / 2;
+}
+
+/* the pitch at bufl[a, a+n) near f (find_pitch), in cents from f */
+static float cents_at(uint32_t a, uint32_t n, float f) { return cents_off(find_pitch(a, n, f), f); }
+
+static void test_glide_just(void)
+{
+    float c4 = 261.6256f, early, late;
+    int i;
+    /* glide: a hard pluck starts sharp and settles; none at Glide 0 */
+    fresh();
+    km_set(P_GLIDE, 100);
+    km_set(P_HARD, 100);
+    km_set(P_MATERIAL, MAT_BAMBOO);                  /* one clean mode, no twin */
+    km_pluck(6000, 127, 0, 0);
+    render(0, 22050);
+    early = cents_at(0, 1024, c4);
+    late = cents_at(8820, 4096, c4);
+    CHECK(early > late + 8.0f && fm_fabsf(late) < 3.0f, "glide: %.1f cents at once, %.1f later", (double)early, (double)late);
+    fresh();
+    km_set(P_GLIDE, 0);
+    km_set(P_HARD, 100);
+    km_set(P_MATERIAL, MAT_BAMBOO);
+    km_pluck(6000, 127, 0, 0);
+    render(0, 22050);
+    CHECK(fm_fabsf(cents_at(0, 1024, c4)) < 3.0f, "no glide at 0: %.1f cents", (double)cents_at(0, 1024, c4));
+    /* just intonation, over C: the major third 386, the fifth 702, the minor seventh 1018; off-grid kept */
+    CHECK(km_just_cents(6400, 6000) == 6386 && km_just_cents(6700, 6000) == 6702 && km_just_cents(7000, 6000) == 7018,
+          "just: E %d G %d Bb %d", km_just_cents(6400, 6000), km_just_cents(6700, 6000), km_just_cents(7000, 6000));
+    CHECK(km_just_cents(5900, 6000) == 5888 && km_just_cents(6000, 6000) == 6000 && km_just_cents(7200, 6000) == 7200,
+          "just below and at the octave");
+    CHECK(km_just_cents(6165, 6000) == 6165, "an Mbira degree is left alone");
+    for (i = 0; i < 12; i++)
+        CHECK(fm_fabsf((float)(km_just_cents(6000 + 100 * i, 6000) - 6000 - 100 * i)) < 20.0f, "just within 20 cents %d", i);
+}
+
+/* the effects on one ringing tine: what each does, that none clicks as it comes in or goes */
+static void test_color(void)
+{
+    float c4 = 261.6256f, lo = 1e9f, hi = -1e9f;
+    uint32_t i;
+    /* tape: the pitch wavers */
+    fresh();
+    km_set(P_TAPE, 100);
+    km_set(P_DECAY, 100);
+    km_set(P_MATERIAL, MAT_BAMBOO);
+    km_set(P_GLIDE, 0);
+    for (i = 0; i < 4; i++) {                    /* the same tine, plucked again and again: four looks */
+        float c;
+        km_pluck(6000, 110, 0, 0);
+        render(0, 11025);
+        c = cents_at(3000, 8000, c4);
+        lo = fm_minf(lo, c);
+        hi = fm_maxf(hi, c);
+    }
+    CHECK(hi - lo > 3.0f, "tape wow: the pitch moved %.1f cents", (double)(hi - lo));
+    CHECK(!nan_seen && peak < 1.0f, "tape peak %.3f", (double)peak);
+    /* filter: the low-pass takes a high tine down, the high-pass a low one; neither touches the other */
+    {
+        static const int SET[3] = {0, -80, 80}, NOTE[2] = {8400, 4800};
+        float lv[3][2];
+        int k, nn;
+        master = 4096 / 16;                      /* the output's limiter linear */
+        for (k = 0; k < 3; k++)
+            for (nn = 0; nn < 2; nn++) {
+                fresh();
+                km_set(P_FILTER, SET[k]);
+                render(0, 4410);                 /* the filter in place before the pluck */
+                km_pluck(NOTE[nn], 110, 0, 0);
+                render(0, 22050);
+                lv[k][nn] = 20.0f * fm_log2f(rms(bufl, 0, 22050)) * 0.30103f;
+            }
+        master = 4096 / 2;
+        CHECK(lv[1][0] < lv[0][0] - 8.0f && fm_fabsf(lv[1][1] - lv[0][1]) < 3.0f,
+              "low-pass -80: C7 %+.1f dB, C3 %+.1f dB", (double)(lv[1][0] - lv[0][0]), (double)(lv[1][1] - lv[0][1]));
+        CHECK(lv[2][1] < lv[0][1] - 10.0f && fm_fabsf(lv[2][0] - lv[0][0]) < 3.0f,
+              "high-pass +80: C3 %+.1f dB, C7 %+.1f dB", (double)(lv[2][1] - lv[0][1]), (double)(lv[2][0] - lv[0][0]));
+    }
+    /* chorus: left and right part */
+    {
+        double sl = 0, sr = 0, slr = 0;
+        fresh();
+        km_set(P_CHORUS, 100);
+        km_set(P_WIDTH, 0);                      /* a mono source: only the chorus can widen it */
+        km_pluck(6700, 110, 0, 0);
+        render(0, 44100);
+        for (i = 4410; i < 44100; i++) {
+            sl += (double)bufl[i] * (double)bufl[i];
+            sr += (double)bufr[i] * (double)bufr[i];
+            slr += (double)bufl[i] * (double)bufr[i];
+        }
+        CHECK(slr / (sl > sr ? sl : sr) < 0.97, "chorus widens: correlation %.3f", slr / (sl > sr ? sl : sr));
+    }
+    /* lo-fi: hiss while it plays, silence after */
+    fresh();
+    km_set(P_LOFI, 100);
+    km_set(P_MATERIAL, MAT_BAMBOO);
+    km_pluck(6000, 110, 0, 0);
+    render(0, 44100 * 4);
+    CHECK(rms(bufl, 44100 * 3, 44100) < 1e-4f, "lo-fi hiss dies with the music: %.6f", (double)rms(bufl, 44100 * 3, 44100));
+    /* none clicks in or out: a ringing tine, each effect switched on, then off, mid-note. The edges
+     * are measured on the change and compared with the same effect settled (Lo-fi's hiss has edges of
+     * its own; the filter changes the tine's), and with the tine alone */
+    {
+        static const int P[5] = {P_TAPE, P_LOFI, P_CHORUS, P_FILTER, P_FILTER};
+        static const int V[5] = {100, 100, 100, -60, 60};
+        int k;
+        corner_glide = 0;
+        for (k = 0; k < 5; k++) {
+            float on, off, alone, settled;
+            master = 4096 / 16;
+            fresh();
+            km_set(P_DECAY, 100);
+            km_pluck(6000, 110, 0, 0);
+            render(0, 22050);
+            alone = edge_max(11025, 11025);
+            km_set(P[k], V[k]);
+            render(0, 22050);
+            on = edge_max(0, 4410);                  /* the 100 ms after it comes in */
+            settled = edge_max(11025, 11025);
+            km_set(P[k], 0);
+            render(0, 22050);
+            off = edge_max(0, 4410);
+            master = 4096 / 2;
+            CHECK(fm_maxf(on, off) < fm_maxf(alone, settled) * 3.0f + 2e-6f,
+                  "%s %d in / out mid-note: edge %.6f / %.6f, settled %.6f, the tine alone %.6f", km_param_info(P[k])->name,
+                  V[k], (double)on, (double)off, (double)settled, (double)alone);
+        }
+        /* and the filter straight through the middle, low-pass to high-pass */
+        master = 4096 / 16;
+        fresh();
+        km_set(P_DECAY, 100);
+        km_set(P_FILTER, -40);
+        km_pluck(6000, 110, 0, 0);
+        render(0, 22050);
+        {
+            float a = edge_max(11025, 11025), b;
+            km_set(P_FILTER, 40);
+            render(0, 8820);
+            b = edge_max(0, 8820);
+            master = 4096 / 2;
+            CHECK(b < a * 3.0f + 2e-6f, "filter low to high mid-note: edge %.6f, settled %.6f", (double)b, (double)a);
+        }
+    }
+}
+
+/* the pattern: pulses at the tempo (3 a beat), over the chord it is given; MIDI clock leads when it comes */
+static void test_pattern(void)
+{
+    int chord[3] = {6000, 6400, 6700}, i, pulses = 0, last = -1, low = 0, high = 0;
+    fresh();
+    km_set(P_PTEMPO, 120);                       /* 6 pulses a second */
+    km_pool(chord, 3);
+    km_pattern(1);
+    for (i = 0; i < 344; i++) {                  /* 2 s, in blocks of 256 */
+        int v;
+        render(0, 256);
+        if (km_pat_pulse != last) {
+            pulses++;
+            last = km_pat_pulse;
+        }
+        for (v = 0; v < KM_NVOICE; v++) {
+            low |= km_voice_cents[v] == 4800;        /* L1: the root an octave down */
+            high |= km_voice_cents[v] == 7600;       /* R5: the third an octave up */
+        }
+    }
+    CHECK(km_pat_on && pulses >= 11 && pulses <= 13, "pattern at 120: %d pulses in 2 s (12 wanted)", pulses);
+    CHECK(low && high, "the pattern reaches the bass and the treble (%d %d)", low, high);
+    km_pattern(0);
+    render(0, 256);
+    last = km_pat_pulse;
+    render(0, 44100);
+    CHECK(!km_pat_on && km_pat_pulse == last, "the pattern stops");
+    /* MIDI clock: 8 ticks a pulse */
+    fresh();
+    km_pool(chord, 3);
+    km_pattern(1);
+    km_clock(KM_CLK_START);
+    pulses = 0;
+    last = -1;
+    for (i = 0; i < 96; i++) {                   /* four beats of clock, as fast as it likes */
+        km_clock(KM_CLK_TICK);
+        render(0, 64);
+        if (km_pat_pulse != last) {
+            pulses++;
+            last = km_pat_pulse;
+        }
+    }
+    CHECK(km_ext && pulses == 12, "MIDI clock: %d pulses in 96 ticks (12 wanted)", pulses);
+    /* a Stop holds it, ticks or no ticks; ARP starts it again */
+    km_clock(KM_CLK_STOP);
+    render(0, 256);
+    last = km_pat_pulse;
+    render(0, 44100);
+    CHECK(km_pat_pulse == last, "MIDI stop: the pattern held (pulse %d -> %d)", last, km_pat_pulse);
+    km_pattern(1);
+    render(0, 22050);
+    CHECK(km_pat_pulse != last, "ARP after a stop: the pattern runs");
+    /* one, two, three notes held: the pattern stays near them (bass an octave down, treble within two up) */
+    for (i = 1; i <= 3; i++) {
+        int one[3] = {6000, 6400, 6700}, k, lo = 99999, hi = 0;
+        fresh();
+        km_set(P_PATTERN, PAT_CASCADE);          /* (reaches R6, the highest role) */
+        km_set(P_PTEMPO, 200);
+        km_pool(one, i);
+        km_pattern(1);
+        for (k = 0; k < 172; k++) {
+            int v;
+            render(0, 256);
+            for (v = 0; v < KM_NVOICE; v++)
+                if (km_voice_cents[v] >= 0) {
+                    lo = km_voice_cents[v] < lo ? km_voice_cents[v] : lo;
+                    hi = km_voice_cents[v] > hi ? km_voice_cents[v] : hi;
+                }
+        }
+        CHECK(lo >= 6000 - 1200 && hi <= 6000 + 2400, "%d notes: the pattern plays %d..%d cents", i, lo, hi);
+    }
+    for (i = 0; i < PAT_N; i++) {                /* every pattern: bounded, no NaN */
+        fresh();
+        km_set(P_PATTERN, i);
+        km_set(P_PTEMPO, 200);
+        km_pool(chord, 3);
+        km_pattern(1);
+        render(0, 44100 * 2);
+        CHECK(!nan_seen && peak < 1.0f && peak > 0.05f, "pattern %d peak %.3f", i, (double)peak);
+    }
 }
 
 static void listen(const char *dir)
@@ -520,6 +819,10 @@ int main(int argc, char **argv)
     test_grains();
     test_body();
     test_bodies();
+    test_no_pops();
+    test_glide_just();
+    test_color();
+    test_pattern();
     test_long_run();
     if (argc > 1)
         listen(argv[1]);

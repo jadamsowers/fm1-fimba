@@ -22,6 +22,8 @@ static const km_param_t PARAMS[P_NPARAMS] = {
     {"Feedback", 0, 95, 45}, {"Spray", 0, 100, 30}, {"Strum ms", 0, 120, 30}, {"Release", 0, 1, 0},
     {"Tune", -50, 50, 0}, {"MIDI ch", 0, 16, 0}, {"MIDI out", 0, 1, 1}, {"Width", 0, 100, 70},
     {"Octave", -2, 2, 0}, {"Transpose", -12, 12, 0},
+    {"Tape", 0, 100, 0}, {"Lo-fi", 0, 100, 0}, {"Chorus", 0, 100, 0}, {"Filter", -100, 100, 0},
+    {"Pattern", 0, PAT_N - 1, PAT_THUMBS}, {"Tempo", 40, 200, 96}, {"Glide", 0, 100, 30}, {"Tuning", 0, TUNE_N - 1, TUNE_EQUAL},
 };
 const km_param_t *km_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -81,6 +83,17 @@ static int tonic(int key, int octave) { return 6000 + 100 * (key >= 6 ? key - 12
  *   w:      0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
  *   degree 14  12  10   8   6   4   2   0   1   3   5   7   9  11  13  15 */
 static int white_degree(int w) { return w <= 7 ? 2 * (7 - w) : 2 * (w - 8) + 1; }
+
+int km_tonic_cents(int key, int octave) { return tonic(key, octave); }
+
+int km_just_cents(int cents, int tonic_cents)
+{
+    static const int16_t JUST[12] = {0, 112, 204, 316, 386, 498, 590, 702, 814, 884, 1018, 1088};
+    int d = cents - tonic_cents, pc = (d % 1200 + 1200) % 1200;
+    if (pc % 100)
+        return cents;                             /* off the equal grid (Mbira): its own tuning */
+    return cents - pc + JUST[pc / 100];
+}
 
 int km_white_cents(int layout, int scale, int key, int octave, int w)
 {
@@ -171,6 +184,8 @@ void km_param_text(int i, int v, char *b)
     static const char *const BLK[BLK_N] = {"Chords", "Sharps", "Perform"};
     static const char *const GP[GP_N] = {"-12", "-7", "0", "+7", "+12", "+19", "Shimmer", "Reverse"};
     static const char *const REL[2] = {"Ring", "Damp"};
+    static const char *const PAT[PAT_N] = {"Thumbs", "Cascade", "3 over 2", "Interlock"};
+    static const char *const TUN[TUNE_N] = {"Equal", "Just"};
     switch (i) {
     case P_MATERIAL: copy_s(b, km_material(v)->name); return;
     case P_BODY: copy_s(b, BODY[(unsigned)v < BODY_N ? v : 0]); return;
@@ -180,6 +195,18 @@ void km_param_text(int i, int v, char *b)
     case P_SCALE: copy_s(b, SCALES[(unsigned)v < KM_NSCALE ? v : 0].name); return;
     case P_KEY: copy_s(b, KM_NOTE_NAME[(unsigned)v % 12u]); return;
     case P_RELEASE: copy_s(b, REL[v ? 1 : 0]); return;
+    case P_PATTERN: copy_s(b, PAT[(unsigned)v < PAT_N ? v : 0]); return;
+    case P_TUNING: copy_s(b, TUN[v ? 1 : 0]); return;
+    case P_FILTER:                                /* one knob: left a low-pass, right a high-pass */
+        if (!v) {
+            copy_s(b, "Off");
+            return;
+        }
+        *b++ = v < 0 ? 'L' : 'H';
+        *b++ = 'P';
+        *b++ = ' ';
+        v = v < 0 ? -v : v;
+        break;
     case P_MIDIOUT: copy_s(b, ONOFF[v ? 1 : 0]); return;
     case P_MIDICH:
         if (!v) {
@@ -203,7 +230,8 @@ void km_param_text(int i, int v, char *b)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_PLUCK, C_DAMP, C_DAMPALL, C_SUSTAIN, C_HOLE, C_BEND, C_FREEZE, C_PANIC };
+enum { C_SET, C_PLUCK, C_DAMP, C_DAMPALL, C_SUSTAIN, C_HOLE, C_BEND, C_FREEZE, C_PANIC, C_PATTERN, C_POOLCLR, C_POOLADD,
+       C_CLOCK };
 typedef struct {
     uint8_t c;
     int8_t pan;
@@ -243,12 +271,21 @@ void km_hole(int src, int amount) { post(C_HOLE, src, clampi(amount, 0, 127), 0,
 void km_bend(int v) { post(C_BEND, clampi(v, -8192, 8191), 0, 0, 0); }
 void km_freeze(int on) { post(C_FREEZE, on, 0, 0, 0); }
 void km_panic(void) { post(C_PANIC, 0, 0, 0, 0); }
+void km_pattern(int on) { post(C_PATTERN, on, 0, 0, 0); }
+void km_pool(const int *cents, int n)
+{
+    int i;
+    post(C_POOLCLR, 0, 0, 0, 0);
+    for (i = 0; i < n && i < KM_NPOOL; i++)
+        post(C_POOLADD, clampi(cents[i], 0, 12700), 0, 0, 0);
+}
+void km_clock(int msg) { post(C_CLOCK, msg, 0, 0, 0); }
 
 /* -------------------------------------------------------------- state --- */
 volatile float km_voice_level[KM_NVOICE];
 volatile int16_t km_voice_cents[KM_NVOICE];
 volatile uint8_t km_frozen, km_grains_on;
-volatile float km_hole_open = 1.0f, km_buzz_level;
+volatile float km_hole_open = 1.0f, km_buzz_level, km_out_level;
 
 static int16_t par[P_NPARAMS];
 static float tunefac = 1.0f, bendfac = 1.0f, width = 0.7f;
@@ -272,13 +309,51 @@ typedef struct {
     float ex_amp, ex_ph, ex_inc;                      /* the pluck: a half-sine pulse, ex_ph 0..0.5 turns */
     float click, click_dec;                           /* the nail: a burst of noise */
     int16_t cents;
-    uint8_t on, nm, quiet, released;
+    float fade, fade_step;                            /* a stolen voice, fading out (fade slots only) */
+    float w0[KM_NMODE], rr[KM_NMODE], amp[KM_NMODE];  /* each mode at rest: frequency (rad), radius, level */
+    float glide, glide_pend, glide_rise;              /* cents sharp now (a hard pluck stretches the tine); to come,
+                                                       * and how much more each chunk (a ringing tine eases into it) */
+    uint8_t on, nm, quiet, released, contact, rise_n;         /* contact: chunks left of a thumb on it (re-pluck) */
 } voice_t;
-static voice_t vc[KM_NVOICE];
+/* Two spare slots where a stolen voice fades out over a few milliseconds while its slot takes the new
+ * tine: cutting it dead was a pop (as loud as the tine was) */
+#define KM_NFADE 2
+#define FADE_S (0.006f * KM_SR)
+static voice_t vc[KM_NVOICE + KM_NFADE];
+/* Glide: a tine plucked hard swings wide, and the stretch of its bending raises its pitch a little until
+ * the swing narrows (tension modulation). Up to glide_max cents (Glide: 0..40), settling in ~45 ms */
+static float glide_max = 12.0f;
+#define GLIDE_K 0.96826f                               /* per chunk of 64: exp(-64 / (0.045 s * SR)) */
+/* Re-plucking a ringing tine: the thumb lands on it, damping it to ~0.55 over CONTACT_N chunks, then
+ * slips off (the new pluck). Done through the resonators (their decay), never a jump in the waveform */
+#define CONTACT_N 3u                                  /* chunks of BLK (64): ~4.4 ms */
+#define CONTACT_D 0.99689f                            /* per sample: 0.55 over 192 samples */
+#define FINGER_D 0.99978f                             /* a finger left on it (Release Damp, palm mute) */
 
 static float cents_hz(int c) { return 8.17579892f * fm_exp2f((float)c * (1.0f / 1200.0f)) * tunefac * bendfac; }
 
 /* the modes' coefficients for the voice's tine, its material, Decay and Tone (damp: the finger) */
+/* The resonators' settings, from their frequency (with the glide) and radius: b1 and g follow the
+ * frequency, b2 the radius. A ringing mode simply carries on from its last two outputs, which is the
+ * smoothest join a retune can have (keeping its amplitude and phase instead bends it away from the
+ * samples already played: a sharper edge, measured). Cheap enough to run every chunk while a pluck's
+ * glide settles. */
+static void voice_freq(voice_t *v)
+{
+    const float st = 1.0f + v->glide * 0.000577791f;   /* cents -> ratio (first order: the glide is small) */
+    int k;
+    for (k = 0; k < KM_NMODE; k++) {
+        float w = v->w0[k] * st, r = v->rr[k];
+        if (k >= v->nm || v->amp[k] <= 0.0f || w > 0.45f * FM_TWO_PI) {
+            v->b1[k] = v->b2[k] = v->g[k] = 0.0f;
+            continue;
+        }
+        v->b1[k] = 2.0f * r * fm_cosf(w);
+        v->b2[k] = -r * r;
+        v->g[k] = v->amp[k] * fm_sinf(w);             /* an impulse of area 1 rings at amplitude amp */
+    }
+}
+
 static void voice_coefs(voice_t *v)
 {
     const km_material_t *m = km_material(par[P_MATERIAL]);
@@ -287,31 +362,31 @@ static void voice_coefs(voice_t *v)
           t1 = m->t60 * dscale * fm_powf(f0 * (1.0f / 261.63f), -m->pitch_k);
     int k, nm = 0;
     for (k = 0; k < KM_NMODE; k++) {
-        float ratio = k ? m->ratio[k - 1] : 1.0f, amp = k ? m->amp[k - 1] : 1.0f, f = f0 * ratio, t60, r, w;
+        float ratio = k ? m->ratio[k - 1] : 1.0f, amp = k ? m->amp[k - 1] : 1.0f, f = f0 * ratio, t60, r;
         if (k == 1 && m->beat_amp <= 0.0f)
             amp = 0.0f;
-        if (f > 0.45f * KM_SR || amp <= 0.0f) {
-            v->b1[k] = v->b2[k] = v->g[k] = 0.0f;
+        v->amp[k] = 0.0f;
+        if (f > 0.45f * KM_SR || amp <= 0.0f)
             continue;
-        }
         t60 = k <= 1 ? t1 : t1 / (1.0f + m->loss * tonefac * (ratio - 1.0f));
         if (t60 < 0.01f)
             t60 = 0.01f;
         r = fm_expf(-6.9077553f / (t60 * KM_SR)) * v->damp;
-        w = FM_TWO_PI * f / KM_SR;
-        v->b1[k] = 2.0f * r * fm_cosf(w);
-        v->b2[k] = -r * r;
-        v->g[k] = amp * fm_sinf(w);                   /* an impulse of area 1 rings at amplitude amp */
+        v->w0[k] = FM_TWO_PI * f / KM_SR;
+        v->rr[k] = r;
+        v->amp[k] = amp;
         nm = k + 1;
     }
     v->nm = (uint8_t)nm;
+    voice_freq(v);
 }
 
 static void voice_damp(voice_t *v)
 {
-    if (v->damp < 1.0f || !v->on)
+    if (v->damp == FINGER_D || !v->on)
         return;
-    v->damp = 0.99978f;                               /* ~0.7 s T60 for the first mode... */
+    v->contact = 0;
+    v->damp = FINGER_D;                               /* ~0.7 s T60 for the first mode... */
     voice_coefs(v);                                    /* ...and the upper ones die in a moment */
 }
 
@@ -328,18 +403,27 @@ static voice_t *voice_for(int cents)
         if (!vc[i].on)
             return &vc[i];
     for (i = 0; i < KM_NVOICE; i++) {
-        float l = vc[i].level * (vc[i].damp < 1.0f ? 0.25f : 1.0f);   /* a damped tine goes first */
+        float l = vc[i].level * (vc[i].damp == FINGER_D ? 0.25f : 1.0f);   /* a damped tine goes first */
         if (l < lo) {
             lo = l;
             best = i;
         }
     }
-    {
-        voice_t *v = &vc[best];
+    {   /* the quietest goes to a fade slot (the one nearest silence, if both are busy) and fades out */
+        voice_t *v = &vc[best], *f = &vc[KM_NVOICE];
         int k;
+        for (i = KM_NVOICE; i < KM_NVOICE + KM_NFADE; i++)
+            if (!vc[i].on || vc[i].fade < f->fade)
+                f = &vc[i];
+        *f = *v;
+        f->fade = 1.0f;
+        f->fade_step = 1.0f / FADE_S;
+        f->ex_ph = 0.5f;                                /* no more pluck, no more click */
+        f->click = 0.0f;
         for (k = 0; k < KM_NMODE; k++)
             v->y1[k] = v->y2[k] = 0.0f;
         v->on = 0;
+        km_voice_level[best] = 0.0f;
         return v;
     }
 }
@@ -354,25 +438,33 @@ static void pluck(int cents, int vel, int pan)
           tp = 0.0012f * fm_exp2f(-4.5f * hard),
           vg = (float)vel * (1.0f / 127.0f), a, n;
     int k;
-    if (v->on) {                                        /* the thumb meets the ringing tine first */
-        for (k = 0; k < KM_NMODE; k++) {
-            v->y1[k] *= 0.55f;
-            v->y2[k] *= 0.55f;
-        }
-    } else {
+    int again = v->on;
+    if (!again)
         for (k = 0; k < KM_NMODE; k++)
             v->y1[k] = v->y2[k] = 0.0f;
-    }
     v->cents = (int16_t)cents;
-    v->damp = 1.0f;
+    v->damp = again ? CONTACT_D : 1.0f;                 /* ringing: the thumb lands on it first */
+    v->contact = again ? (uint8_t)CONTACT_N : 0u;
     v->released = 0;
     voice_coefs(v);
     n = tp * KM_SR;                                     /* pulse samples */
     if (n < 1.0f)
         n = 1.0f;
     a = vg * vg * 0.55f;
+    {   /* sharp at first: tension, as it swings wide. A ringing tine takes it as the thumb slips off */
+        float gl = glide_max * vg * vg * (0.4f + 0.6f * hard);
+        v->glide_rise = 0.0f;
+        v->rise_n = 0;
+        if (again) {
+            v->glide_pend = gl;
+        } else {
+            v->glide = gl;
+            v->glide_pend = 0.0f;
+            voice_freq(v);
+        }
+    }
     v->ex_inc = 0.5f / n;                               /* half a turn over the contact */
-    v->ex_ph = 0.0f;
+    v->ex_ph = again ? -(float)(CONTACT_N * 64u) * v->ex_inc : 0.0f;   /* re-pluck: it slips off after the contact */
     v->ex_amp = a * (FM_PI * 0.5f) / n;                 /* area a: the first mode rings at ~a */
     v->click = a * m->click * hard * hard * 0.12f;
     v->click_dec = fm_expf(-1.0f / (0.0025f * KM_SR));
@@ -388,7 +480,7 @@ static void pluck(int cents, int vel, int pan)
 static void retune_all(void)
 {
     int i;
-    for (i = 0; i < KM_NVOICE; i++)
+    for (i = 0; i < KM_NVOICE + KM_NFADE; i++)
         if (vc[i].on)
             voice_coefs(&vc[i]);
 }
@@ -589,19 +681,24 @@ static void plate_init(void)
 #define GRB_N 24576u                                    /* 1.11 s of grain source */
 static int16_t dly_buf[DLY_N] KM_POOL;
 static int16_t grb_buf[GRB_N] KM_POOL;
+/* Stored at 0.3 of the signal through a soft limiter (tanh), read back x 1/0.3: a chord of loud tines
+ * sums to several times full scale before the output stage, which hard-clipped these lines (crackle in
+ * the grains and the echoes). Linear within ~3 % up to 1.0, soft above, never a hard edge. */
+#define LINE_IN 0.3f
 #define S16 32767.0f
-#define S16I (1.0f / 32767.0f)
+#define S16I (1.0f / (32767.0f * LINE_IN))
 static inline int16_t to16(float x)
 {
-    x = fm_clampf(x, -1.0f, 1.0f) * S16;
+    x = fm_tanhf(x * LINE_IN) * S16;
     return (int16_t)(x < 0.0f ? x - 0.5f : x + 0.5f);
 }
 
 #ifdef OM_HOST
 /* the device's .pool is 0x54000 bytes and the build keeps 8 KiB spare; the canvas (gfx.c) takes 240 x 144
  * x 2. Checked here because the device build cannot run where these tests do. */
-_Static_assert(sizeof pl_buf + sizeof dly_buf + sizeof grb_buf + 240u * 144u * 2u <= 0x54000u - 8192u,
-               "the .pool would overflow");
+_Static_assert(sizeof pl_buf + sizeof dly_buf + sizeof grb_buf + 4u * (1024u + 2u * 512u) + 240u * 144u * 2u <=
+                   0x54000u - 8192u,
+               "the .pool would overflow");                  /* (+ the chorus and tape lines, below) */
 #endif
 
 /* ---- the delay: one line, two taps. Written x = in + fb^2 * line(2T); the left hears line(T), the right
@@ -703,6 +800,299 @@ static void grain_spawn(void)
     g->on = 1;
 }
 
+/* ------------------------------------------------- chorus, filter, tape --- */
+/* Chorus: the dry sound (mono) into a 23 ms line, read by two taps that wander +-3 ms around 12 ms, a
+ * quarter cycle apart, left and right: a slow ensemble shimmer, wide. On the instrument, before the
+ * echoes and the room. */
+#define CH_N 1024u
+static float ch_buf[CH_N] KM_POOL;
+static uint32_t ch_w;
+static float ch_ph, ch_amt, ch_t, ch_at, ch_ad;      /* LFO phase (turns); amount now, target; this chunk's
+                                                       * end value and step a sample (every setting glides
+                                                       * sample by sample: a step a chunk was a click) */
+static float ch_dl0, ch_dr0;                          /* the taps' delays at the start of this chunk */
+
+static inline float line_read(const float *b, uint32_t mask, uint32_t w, float back)
+{
+    uint32_t ib = (uint32_t)back, i0 = (w - ib) & mask, i1 = (i0 - 1u) & mask;
+    float f = back - (float)ib;
+    return b[i0] + (b[i1] - b[i0]) * f;
+}
+
+/* Filter: one knob. Left of centre a low-pass from 20 kHz down to ~200 Hz, right a high-pass from 20 Hz
+ * up to ~3.9 kHz, the resonance rising with the sweep; centre is off. Simper's SVF per channel, its
+ * setting glides (no zipper, no click) */
+static svf_t flt[2];
+static float flt_t, flt_s;                     /* 1/q; target (-1..1) and how far now (0..1) */
+static int flt_mode = -1;                             /* -1 low-pass, +1 high-pass (off: flt_w 0) */
+static float flt_w, flt_wd;                           /* how much of the filtered sound (crossfade in and out) */
+static float flt_c[4], flt_cd[4];                     /* a1 a2 a3 k now, and their step a sample: the setting
+                                                       * moves sample by sample (a high-pass shows any jump) */
+
+static float flt_inv = 1.0f / 64.0f;                  /* 1 / the chunk's length */
+static void filter_coefs(void)
+{
+    float a = fm_fabsf(flt_s), hz = flt_mode < 0 ? 20000.0f * fm_exp2f(-6.6f * a) : 20.0f * fm_exp2f(7.6f * a), g;
+    int i;
+    if (hz > 19000.0f)
+        hz = 19000.0f;
+    g = fm_tanf(FM_PI * hz / KM_SR);
+    {
+        float k = 1.0f / (0.707f + 0.9f * a), a1 = 1.0f / (1.0f + g * (g + k)), to[4];
+        to[0] = a1;
+        to[1] = g * a1;
+        to[2] = g * g * a1;
+        to[3] = k;
+        for (i = 0; i < 4; i++)
+            flt_cd[i] = (to[i] - flt_c[i]) * flt_inv;
+    }
+}
+
+static inline float filter_run(svf_t *f, float x)
+{
+    float v3 = x - f->s2, v1 = flt_c[0] * f->s1 + flt_c[1] * v3, v2 = f->s2 + flt_c[1] * f->s1 + flt_c[2] * v3;
+    f->s1 = 2.0f * v1 - f->s1;
+    f->s2 = 2.0f * v2 - f->s2;
+    return flt_mode < 0 ? v2 : x - flt_c[3] * v1 - v2;
+}
+
+/* Tape: the whole output through a short line whose length wanders, slowly (wow, 0.55 Hz, and a slower
+ * drift) and quickly (flutter, 7.3 Hz): the pitch wavers, up to ~12 cents at Tape 100. And saturates, as
+ * tape does when it's driven. Lo-fi: a cheaper machine. The top rolls off (down to ~2.8 kHz), the image
+ * narrows, and there is hiss, which follows the music down (as a noise reducer does), so silence is
+ * silent. */
+#define TP_N 512u
+static float tp_l[TP_N] KM_POOL, tp_r[TP_N] KM_POOL;
+static uint32_t tp_w;
+static float tp_amt, tp_t, tp_mix, wow_ph, flut_ph, drift, drift_t, tp_d0, tp_ad, tp_md, tp_at, tp_mt;
+static float lf_amt, lf_t, lf_a = 1.0f, lf_l, lf_r, hiss_env, lf_ad, lf_at, lf_aa, lf_aad;
+
+/* the three, on one stereo sample each; the chunk's settings come from fx_chunk() */
+static float ch_dl, ch_dr, ch_dd_l, ch_dd_r, tp_d, tp_dd;
+static void fx_chunk(uint32_t n)
+{
+    float c;
+    const float inv = 1.0f / (float)n;
+    /* chorus: the amount glides; the taps' delays move linearly across the chunk */
+    ch_amt = ch_at;                                    /* (where the last chunk's ramp ended) */
+    ch_at += 0.2f * (ch_t - ch_at);
+    if (ch_at < 1e-4f && ch_t == 0.0f)
+        ch_at = 0.0f;
+    ch_ad = (ch_at - ch_amt) * inv;
+    ch_ph += 0.8f * (float)n / KM_SR;
+    if (ch_ph >= 1.0f)
+        ch_ph -= 1.0f;
+    c = 529.2f + 132.3f * fm_sin_turns(ch_ph);          /* 12 ms +- 3 ms, in samples */
+    ch_dd_l = (c - ch_dl0) / (float)n;
+    ch_dl = ch_dl0;
+    ch_dl0 = c;
+    c = 529.2f + 132.3f * fm_sin_turns(ch_ph + 0.25f);
+    ch_dd_r = (c - ch_dr0) / (float)n;
+    ch_dr = ch_dr0;
+    ch_dr0 = c;
+    /* filter: always running, at its last setting when it is off, so it always holds the sound's
+     * state: it fades in and out (~6 ms) without the burst of a filter started from rest, and goes from
+     * low-pass to high-pass (the same filter, read the other way) by fading out, turning, fading in */
+    {
+        const int want = flt_t < 0.0f ? -1 : flt_t > 0.0f ? 1 : 0;
+        float target;
+        if (want && want != flt_mode && flt_w <= 0.0f)
+            flt_mode = want;
+        target = want && want == flt_mode ? 1.0f : 0.0f;
+        if (target > 0.0f)
+            flt_s += 0.12f * (fm_fabsf(flt_t) - flt_s);   /* (how far, on its side) */
+        if (target == 0.0f && flt_w < 0.005f)
+            flt_w = 0.0f;
+        flt_wd = (target - flt_w) * 0.25f * inv;        /* (a quarter of the way a chunk) */
+        flt_inv = inv;
+        filter_coefs();
+    }
+    /* tape: in and out of the line with a quick crossfade; the line's length from wow, drift, flutter */
+    tp_amt = tp_at;
+    tp_mix = tp_mt;
+    tp_at += 0.1f * (tp_t - tp_at);
+    tp_mt += 0.25f * ((tp_t > 0.0f ? 1.0f : 0.0f) - tp_mt);
+    if (tp_mt < 1e-4f && tp_t == 0.0f)
+        tp_mt = tp_at = 0.0f;
+    tp_ad = (tp_at - tp_amt) * inv;
+    tp_md = (tp_mt - tp_mix) * inv;
+    wow_ph += 0.55f * (float)n / KM_SR;
+    flut_ph += 7.3f * (float)n / KM_SR;
+    wow_ph -= wow_ph >= 1.0f ? 1.0f : 0.0f;
+    flut_ph -= flut_ph >= 1.0f ? 1.0f : 0.0f;
+    if ((now_s & 4095u) < n)
+        drift_t = rnds();                              /* a new place to drift to, every ~0.1 s */
+    drift += 0.004f * (drift_t - drift);
+    c = 220.5f + tp_at * (88.2f * fm_sin_turns(wow_ph) + 30.0f * drift + 3.5f * fm_sin_turns(flut_ph));
+    tp_dd = (c - tp_d0) / (float)n;
+    tp_d = tp_d0;
+    tp_d0 = c;
+    /* lo-fi */
+    lf_amt = lf_at;
+    lf_a = lf_aa;
+    lf_at += 0.1f * (lf_t - lf_at);
+    if (lf_at < 1e-4f && lf_t == 0.0f)
+        lf_at = 0.0f;
+    lf_aa = onepole(18000.0f * fm_exp2f(-2.7f * lf_at));
+    lf_ad = (lf_at - lf_amt) * inv;
+    lf_aad = (lf_aa - lf_a) * inv;
+}
+
+static inline void fx_chorus(float *l, float *r)
+{
+    ch_buf[ch_w] = (*l + *r) * 0.5f;
+    if (ch_amt > 0.0f || ch_ad > 0.0f) {
+        float a = line_read(ch_buf, CH_N - 1u, ch_w, ch_dl), b = line_read(ch_buf, CH_N - 1u, ch_w, ch_dr);
+        *l = *l * (1.0f - 0.25f * ch_amt) + a * 0.75f * ch_amt;
+        *r = *r * (1.0f - 0.25f * ch_amt) + b * 0.75f * ch_amt;
+    }
+    ch_w = (ch_w + 1u) & (CH_N - 1u);
+    ch_dl += ch_dd_l;
+    ch_dr += ch_dd_r;
+    ch_amt += ch_ad;
+}
+
+static inline void fx_out(float *l, float *r)
+{
+    {
+        float a = filter_run(&flt[0], *l), b = filter_run(&flt[1], *r);
+        int c;
+        *l += (a - *l) * flt_w;
+        *r += (b - *r) * flt_w;
+        flt_w += flt_wd;
+        for (c = 0; c < 4; c++)
+            flt_c[c] += flt_cd[c];
+        if (flt_w < 0.0f)
+            flt_w = 0.0f;
+    }
+    tp_l[tp_w] = *l;
+    tp_r[tp_w] = *r;
+    if (tp_mix > 0.0f || tp_md > 0.0f) {               /* through the tape: wavering, driven */
+        float a = line_read(tp_l, TP_N - 1u, tp_w, tp_d), b = line_read(tp_r, TP_N - 1u, tp_w, tp_d),
+              drive = 1.0f + 2.0f * tp_amt, mk = 1.0f / drive;
+        a = fm_tanhf(a * drive) * mk;
+        b = fm_tanhf(b * drive) * mk;
+        *l += (a - *l) * tp_mix;
+        *r += (b - *r) * tp_mix;
+    }
+    tp_w = (tp_w + 1u) & (TP_N - 1u);
+    tp_d += tp_dd;
+    tp_amt += tp_ad;
+    tp_mix += tp_md;
+    if (lf_amt > 0.0f || lf_ad > 0.0f) {               /* a cheaper machine */
+        float m = (*l + *r) * 0.5f, sd = (*l - *r) * 0.5f * (1.0f - 0.5f * lf_amt), e = fm_fabsf(m);
+        lf_l += lf_a * (m + sd - lf_l);
+        lf_r += lf_a * (m - sd - lf_r);
+        hiss_env = e > hiss_env ? e : hiss_env * 0.99997f;   /* the hiss follows the music, ~1.5 s down */
+        *l = lf_l + rnds() * lf_amt * 0.006f * fm_minf(1.0f, hiss_env * 8.0f);
+        *r = lf_r + rnds() * lf_amt * 0.006f * fm_minf(1.0f, hiss_env * 8.0f);
+        lf_amt += lf_ad;
+        lf_a += lf_aad;
+    } else {
+        lf_l = *l;
+        lf_r = *r;
+    }
+}
+
+/* ---------------------------------------------------------- pattern --- */
+/* Mbira-style patterns over a chord: twelve pulses a cycle, three a beat. Each pulse plucks up to two
+ * tines, chosen by role: the left thumb's two bass tines (L1 the chord's root an octave down, L2 its
+ * fifth or what stands for it), the right thumb's treble, R1..R6 up through the chord and its octave.
+ * Bass sits left, treble right, as the thumbs do. The first pulse of the cycle is accented, and no two
+ * plucks are quite the same strength. */
+enum { RL1 = 1, RL2, RR1, RR2, RR3, RR4, RR5, RR6 };
+static const uint8_t PATS[3][12][2] = {
+    /* Thumbs: left and right in turn, bass under a treble line that rises and falls */
+    {{RL1}, {RR3}, {RL2}, {RR4}, {RL1}, {RR5}, {RL2}, {RR4}, {RL1}, {RR3}, {RL2}, {RR2}},
+    /* Cascade: down the tines, both sides, into the bass, and back up */
+    {{RR6}, {RR5}, {RR4}, {RR3}, {RR2}, {RR1}, {RL2}, {RL1}, {RR2}, {RR3}, {RR4}, {RR5}},
+    /* 3 over 2: the bass every three pulses against the treble every two */
+    {{RL1, RR3}, {0}, {RR4}, {RL2}, {RR5}, {0}, {RL1, RR4}, {0}, {RR3}, {RL2}, {RR2}, {0}},
+};
+static int pool[KM_NPOOL], npool, pat_on, pat_step, pat_run = 1;
+static float pat_left;
+static uint32_t ext_ticks, ext_age;
+volatile uint8_t km_pat_on, km_pat_pulse, km_ext;
+
+/* The chord's tones, at least three: one note gets its fifth and octave, two get the octave of the
+ * lower. The treble climbs through them by octaves but never above two octaves over the lowest (one note
+ * held would otherwise send R6 five octaves up); the bass is the root and the third tone, an octave down */
+static int role_cents(int r)
+{
+    int t[KM_NPOOL + 2], m = npool, i, c;
+    for (i = 0; i < npool; i++)
+        t[i] = pool[i];
+    if (m == 1)
+        t[m++] = pool[0] + 700;
+    if (m == 2)
+        t[m++] = pool[0] + 1200;
+    if (r == RL1)
+        c = t[0] - 1200;
+    else if (r == RL2)
+        c = t[2] - 1200;
+    else {
+        i = r - RR1;
+        c = t[i % m] + 1200 * (i / m);
+        while (c > t[0] + 2400)
+            c -= 1200;
+    }
+    return c < 0 ? 0 : c > 12700 ? 12700 : c;
+}
+
+static void pluck(int cents, int vel, int pan);
+/* one step: a pulse (or, for Interlock, half of one: the second part answers between the first's) */
+static void pat_fire(void)
+{
+    const int steps = par[P_PATTERN] == PAT_INTERLOCK ? 24 : 12, st = pat_step % steps;
+    int pulse = steps == 24 ? st / 2 : st, k;
+    uint8_t roles[2];
+    if (steps == 24) {
+        if (!(st & 1)) {
+            roles[0] = PATS[0][pulse][0];
+            roles[1] = PATS[0][pulse][1];
+        } else {                                       /* the answering part: six pulses on, a tine higher */
+            const uint8_t *q = PATS[0][(pulse + 6) % 12];
+            for (k = 0; k < 2; k++)
+                roles[k] = q[k] == RL1 ? RL2 : q[k] == RL2 ? RL1 : q[k] >= RR1 && q[k] < RR6 ? (uint8_t)(q[k] + 1) : q[k];
+        }
+    } else {
+        const int p = par[P_PATTERN] < 3 ? par[P_PATTERN] : 0;
+        roles[0] = PATS[p][pulse][0];
+        roles[1] = PATS[p][pulse][1];
+    }
+    for (k = 0; k < 2; k++) {
+        int r = roles[k], vel;
+        if (!r)
+            continue;
+        vel = 84 + (pulse == 0 && (steps == 12 || !(st & 1)) ? 20 : 0) + (r <= RL2 ? 6 : 0) + (int)(rnds() * 6.0f);
+        pluck(role_cents(r), vel, r <= RL2 ? -60 : 60);
+    }
+    km_pat_pulse = (uint8_t)pulse;
+    pat_step = (st + 1) % steps;
+}
+
+/* the pattern's clock, per chunk: its own tempo, or MIDI clock (the ticks come in through drain) */
+static void pat_chunk(uint32_t n)
+{
+    float len;
+    if (!pat_on || !npool) {
+        pat_left = 0.0f;
+        return;
+    }
+    if (km_ext || !pat_run)                             /* (MIDI clock leads, or it was stopped) */
+        return;
+    len = KM_SR * 60.0f / ((float)par[P_PTEMPO] * 3.0f);
+    if (par[P_PATTERN] == PAT_INTERLOCK)
+        len *= 0.5f;
+    pat_left -= (float)n;
+    if (pat_left <= 0.0f) {
+        pat_fire();
+        pat_left += len;
+        if (pat_left < 0.0f)
+            pat_left = len;
+    }
+}
+
 /* ---------------------------------------------------------- parameters --- */
 static float rsend, g_mix, buzz_amt, buzz_lp;
 
@@ -733,6 +1123,11 @@ static void apply(int p, int v)
     case P_FEEDBACK: d_fb = (float)v * 0.01f; break;
     case P_GRAIN: g_mix = (float)v * 0.01f * 1.4f; break;
     case P_WIDTH: width = (float)v * 0.01f; break;
+    case P_TAPE: tp_t = (float)v * 0.01f; break;
+    case P_LOFI: lf_t = (float)v * 0.01f; break;
+    case P_CHORUS: ch_t = (float)v * 0.01f; break;
+    case P_FILTER: flt_t = (float)v * 0.01f; break;
+    case P_GLIDE: glide_max = (float)v * 0.4f; break;
     default: break;
     }
 }
@@ -740,17 +1135,26 @@ static void apply(int p, int v)
 static void quiet(void)
 {
     int i;
-    for (i = 0; i < KM_NVOICE; i++) {
+    for (i = 0; i < KM_NVOICE + KM_NFADE; i++)
         vc[i].on = 0;
+    for (i = 0; i < KM_NVOICE; i++) {
         km_voice_level[i] = 0.0f;
         km_voice_cents[i] = -1;
     }
     for (i = 0; i < NPEND; i++)
         pend[i].on = 0;
+    pat_on = 0;                                         /* (the UI's ARP goes off with it: ui_init) */
+    km_pat_on = 0;
     for (i = 0; i < NGRAIN; i++)
         gr[i].on = 0;
     for (i = 0; i < (int)DLY_N; i++)
         dly_buf[i] = 0;
+    for (i = 0; i < (int)CH_N; i++)
+        ch_buf[i] = 0.0f;
+    for (i = 0; i < (int)TP_N; i++)
+        tp_l[i] = tp_r[i] = 0.0f;
+    flt[0].s1 = flt[0].s2 = flt[1].s1 = flt[1].s2 = 0.0f;
+    lf_l = lf_r = hiss_env = 0.0f;
     for (i = 0; i < 4; i++)
         bf[i].s1 = bf[i].s2 = 0.0f;
     tlo_l = tlo_r = thi_l = thi_r = 0.0f;
@@ -774,6 +1178,29 @@ void km_init(void)
     for (i = 0; i < P_NPARAMS; i++)
         apply(i, PARAMS[i].def);
     d_t = d_tt;
+    ch_amt = ch_at = ch_t;
+    flt_s = fm_fabsf(flt_t);
+    flt_mode = flt_t > 0.0f ? 1 : -1;
+    flt_w = flt_t != 0.0f ? 1.0f : 0.0f;
+    flt_inv = 1.0f;
+    filter_coefs();                                     /* a step of the whole way: in place at once */
+    {
+        int c;
+        for (c = 0; c < 4; c++) {
+            flt_c[c] += flt_cd[c];
+            flt_cd[c] = 0.0f;
+        }
+    }
+    tp_amt = tp_at = tp_t;
+    tp_mix = tp_mt = tp_t > 0.0f ? 1.0f : 0.0f;
+    lf_amt = lf_at = lf_t;
+    lf_a = lf_aa = onepole(18000.0f * fm_exp2f(-2.7f * lf_t));
+    ch_dl0 = ch_dr0 = 529.2f;
+    tp_d0 = 220.5f;
+    npool = 0;
+    pat_on = 0;
+    km_pat_on = 0;
+    km_ext = 0;
     quiet();
     body_coefs();
 }
@@ -848,6 +1275,48 @@ static void drain(void)
         case C_PANIC:
             quiet();
             break;
+        case C_PATTERN:
+            pat_on = c.a != 0;
+            km_pat_on = (uint8_t)pat_on;
+            pat_run = 1;                             /* (ARP starts it, whatever a Stop said) */
+            pat_step = 0;
+            pat_left = 0.0f;                         /* on: the first pulse at once */
+            break;
+        case C_POOLCLR:
+            npool = 0;
+            break;
+        case C_POOLADD: {
+            int at = npool, x = c.a;
+            if (npool >= KM_NPOOL)
+                break;
+            while (at > 0 && pool[at - 1] > x) {      /* kept in order, low to high */
+                pool[at] = pool[at - 1];
+                at--;
+            }
+            pool[at] = x;
+            npool++;
+            break;
+        }
+        case C_CLOCK:
+            ext_age = 0;
+            if (c.a == KM_CLK_TICK) {
+                km_ext = 1;                          /* someone else leads */
+                if (pat_on && npool && pat_run) {
+                    const uint32_t per = par[P_PATTERN] == PAT_INTERLOCK ? 4u : 8u;   /* 24 a beat, 3 pulses */
+                    if (ext_ticks % per == 0u)
+                        pat_fire();
+                }
+                ext_ticks++;
+            } else if (c.a == KM_CLK_START) {
+                ext_ticks = 0;
+                pat_step = 0;
+                pat_run = 1;
+            } else if (c.a == KM_CLK_CONTINUE) {
+                pat_run = 1;
+            } else {
+                pat_run = 0;
+            }
+            break;
         }
     }
     if (bent)
@@ -862,16 +1331,16 @@ static void render_voices(uint32_t n)
 {
     int i, k;
     uint32_t j;
-    for (i = 0; i < KM_NVOICE; i++) {
+    for (i = 0; i < KM_NVOICE + KM_NFADE; i++) {        /* the tines, then the fade slots */
         voice_t *v = &vc[i];
         float pk = 0.0f, vb[BLK];
         int excite = v->ex_ph < 0.5f;
         if (!v->on)
             continue;
-        if (excite) {                                   /* the pulse, while the thumb is on the tine */
+        if (excite) {                                   /* the pulse (ex_ph < 0: the thumb still resting on it) */
             float ph = v->ex_ph;
             for (j = 0; j < n; j++) {
-                xb[j] = ph < 0.5f ? v->ex_amp * fm_sin_turns(ph) : 0.0f;
+                xb[j] = ph >= 0.0f && ph < 0.5f ? v->ex_amp * fm_sin_turns(ph) : 0.0f;
                 knock[j] += xb[j];
                 ph += v->ex_inc;
             }
@@ -902,13 +1371,24 @@ static void render_voices(uint32_t n)
             v->y1[k] = fm_flush(y1);
             v->y2[k] = fm_flush(y2);
         }
-        if (v->click > 1e-6f) {                         /* the nail's tick */
+        if (v->click > 1e-6f && v->ex_ph >= 0.0f) {     /* the nail's tick, as it slips off */
             float c = v->click;
             for (j = 0; j < n; j++) {
                 vb[j] += c * rnds();
                 c *= v->click_dec;
             }
             v->click = c;
+        }
+        if (i >= KM_NVOICE) {                           /* a stolen voice: out in FADE_S, smoothly */
+            float g = v->fade;
+            const float st = v->fade_step;
+            for (j = 0; j < n; j++) {
+                vb[j] *= g * g * (3.0f - 2.0f * g);     /* an S: flat where it starts and where it ends */
+                g = g > st ? g - st : 0.0f;
+            }
+            v->fade = g;
+            if (g <= 0.0f)
+                v->on = 0;
         }
         {
             const float pl = v->pl, pr = v->pr;
@@ -919,6 +1399,24 @@ static void render_voices(uint32_t n)
                 mixr[j] += o * pr;
                 mono[j] += o;
             }
+        }
+        if (i >= KM_NVOICE)
+            continue;
+        if (v->contact && !--v->contact) {              /* the thumb slips off: free again, and stretched */
+            if (v->damp == CONTACT_D)
+                v->damp = 1.0f;
+            v->glide_rise = v->glide_pend * 0.25f;     /* over four chunks (~6 ms): a ringing tine eases into it */
+            v->glide_pend = 0.0f;
+            voice_coefs(v);
+        }
+        if (v->glide_rise > 0.0f) {                     /* rising (a re-pluck) */
+            v->glide += v->glide_rise;
+            if (++v->rise_n >= 4u)
+                v->glide_rise = 0.0f, v->rise_n = 0;
+            voice_freq(v);
+        } else if (v->glide != 0.0f && v->ex_ph >= 0.0f) {   /* then it settles as the swing narrows: ~45 ms */
+            v->glide = v->glide > 0.05f ? v->glide * GLIDE_K : 0.0f;
+            voice_freq(v);
         }
         v->level = pk > v->level ? pk : v->level * 0.9f + pk * 0.1f;
         km_voice_level[i] = v->level;
@@ -992,6 +1490,9 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         mixl[j] = mixr[j] = mono[j] = knock[j] = 0.0f;
     render_voices(n);
     render_body(n);
+    fx_chunk(n);
+    for (j = 0; j < n; j++)                             /* the chorus, on the instrument */
+        fx_chorus(&mixl[j], &mixr[j]);
     for (i = 0; i < NGRAIN; i++)
         active += gr[i].on;
     km_grains_on = (uint8_t)active;
@@ -1052,8 +1553,11 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         dlo = (d_prev_l + (d_cur_l - d_prev_l) * fr) * d_mix;
         dro = (d_prev_r + (d_cur_r - d_prev_r) * fr) * d_mix;
         reverb(((l + r) * 0.5f + (gl + grr) * 0.8f + (dlo + dro) * 0.5f) * rsend * 0.6f, &wl, &wr);
-        l = (l + gl + dlo * (0.5f + 0.5f * width) + dro * (0.5f - 0.5f * width) + wl) * 0.55f * gain;
-        r = (r + grr + dro * (0.5f + 0.5f * width) + dlo * (0.5f - 0.5f * width) + wr) * 0.55f * gain;
+        l = l + gl + dlo * (0.5f + 0.5f * width) + dro * (0.5f - 0.5f * width) + wl;
+        r = r + grr + dro * (0.5f + 0.5f * width) + dlo * (0.5f - 0.5f * width) + wr;
+        fx_out(&l, &r);                                 /* the filter and the tape, on everything */
+        l *= 0.55f * gain;
+        r *= 0.55f * gain;
         out[2 * j] = (int32_t)(fm_tanhf(l) * 8300000.0f);
         out[2 * j + 1] = (int32_t)(fm_tanhf(r) * 8300000.0f);
         now_s++;
@@ -1063,10 +1567,16 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
 void km_render(int32_t *out, uint32_t n, uint32_t gain_q12)
 {
     const float gain = (float)gain_q12 * (1.0f / 4096.0f) * 2.0f;
+    int32_t *const out0 = out, pk = 0;
+    const uint32_t n0 = n;
+    uint32_t j;
     drain();
+    if (km_ext && ++ext_age > 86u)                      /* ~0.5 s without a tick: back to its own tempo */
+        km_ext = 0;
     while (n) {
         uint32_t k = n > BLK ? BLK : n;
         int i;
+        pat_chunk(k);
         for (i = 0; i < NPEND; i++)                     /* the rolls' plucks that are due */
             if (pend[i].on && (int32_t)(pend[i].due - now_s) <= 0) {
                 pend[i].on = 0;
@@ -1076,4 +1586,9 @@ void km_render(int32_t *out, uint32_t n, uint32_t gain_q12)
         out += 2 * k;
         n -= k;
     }
+    for (j = 0; j < 2u * n0; j++) {                     /* how loud it is, tails and all (UI: autosave) */
+        int32_t a = out0[j] < 0 ? -out0[j] : out0[j];
+        pk = a > pk ? a : pk;
+    }
+    km_out_level = (float)pk * (1.0f / 8388608.0f);
 }

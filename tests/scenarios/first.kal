@@ -47,6 +47,15 @@ shot more.png
 tap GLO
 expect view 6
 shot setup.png
+# EDIT: on to the pages without a button of their own, then round
+tap EDIT
+expect view 7
+wait 50
+shot color.png
+tap EDIT
+expect view 8
+wait 50
+shot pattern.png
 tap EDIT
 expect view 0
 # the encoders: SELECT material, ALGORITHM scale, PRESETS key

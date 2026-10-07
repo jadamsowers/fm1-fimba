@@ -79,7 +79,7 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
     <ul>
       <li><b>Layout</b> (Keys page): <b>Tine</b>, the default, puts the tines on the white keys as on a real kalimba, lowest note (C4) in the middle and the scale alternating outward. <b>Keyboard</b> makes every key, white and black, play its printed note from F3 up, with <b>Transpose</b> on the Keys page (or PRESETS).</li>
       <li><b>Black keys</b> in the Tine layout follow the Keys page's <b>Black</b> setting: <b>Chords</b> (a thumb roll: C Dm Em F G Am Bdim, then CM7 FM7 G7 Am7), <b>Sharps</b> (the white key to the left, a semitone up) or <b>Perform</b> (mute, cover the hole, freeze, octave down / up while held, six materials).</li>
-      <li><b>PLAY</b> freezes the grain cloud. <b>REC</b> mutes every tine. <b>ARP</b> switches Release between Ring and Damp.</li>
+      <li><b>PLAY</b> freezes the grain cloud. <b>REC</b> mutes every tine. <b>ARP</b> starts and stops the mbira pattern over the chord you pick (a chord key, held keys in Keyboard, or held MIDI notes).</li>
       <li><b>OCT−</b> / <b>OCT+</b>: octave. <b>SELECT</b> material, <b>ALGORITHM</b> scale, <b>PRESETS</b> key.</li>
     </ul>
   </div>
@@ -90,7 +90,8 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
       <li><b>ENV</b> Body: box, gourd or board, buzzers, wah, wah rate.</li>
       <li><b>FX</b> Space: reverb, size, delay, time. <b>LFO</b> Grain: level, size, density, pitch.</li>
       <li><b>SEL</b> Keys: layout, then scale, key and black-key mode (Tine) or transpose and octave (Keyboard). <b>SEQ</b> More: feedback, spray, strum, release.</li>
-      <li><b>GLO</b> Setup: tune, MIDI channel, MIDI out, width. <b>EDIT</b> steps through them all.</li>
+      <li><b>GLO</b> Setup: tune, MIDI channel, MIDI out, width.</li>
+      <li><b>EDIT</b> steps through them all and on to <b>Color</b> (tape, lo-fi, chorus, filter) and <b>Pattern</b> (pattern, tempo, glide, tuning).</li>
     </ul>
   </div>
   <div>
@@ -211,7 +212,7 @@ function hit(c, cls) {
 // what each control does, on hover (the Buttons list below says the same)
 const TIP = { FX: "Space page: reverb and delay", SEL: "Keys page: layout, scale, key, black keys", ENV: "Body page: body, buzz, wah",
   LFO: "Grain page", EDIT: "Next page", GLO: "Setup page", HOME: "Tine page: material and pluck", SAVE: "Save",
-  ARP: "Release: ring or damp", SEQ: "More page: feedback, spray, strum, release", PLAY: "Freeze the grains", REC: "Palm mute: damp every tine",
+  ARP: "Mbira pattern on / off", SEQ: "More page: feedback, spray, strum, release", PLAY: "Freeze the grains", REC: "Palm mute: damp every tine",
   "OCT-": "Octave down", "OCT+": "Octave up", SELECT: "Material", ALGORITHM: "Scale", PRESETS: "Key (Tine) or transpose (Keyboard)",
   MASTER: "Volume" };
 for (const [n, c] of [...Object.entries(buttons), ...Object.entries(knobs)]) if (TIP[n]) c.g.setAttribute("aria-description", TIP[n]);

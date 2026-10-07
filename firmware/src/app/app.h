@@ -11,7 +11,8 @@
 #define OM_VERSION "DEV"
 #endif
 #define PROJ_MAGIC 0x41424C4Bu           /* "KLBA": never a FoMni project */
-#define PROJ_FORMAT 1u
+#define PROJ_FORMAT 2u                    /* 2: Color and Pattern (format 1 loads: those take defaults) */
+#define PROJ_FORMAT1_NPAR (P_TRANSPOSE + 1)     /* the values a format 1 project holds */
 
 typedef struct {
     uint32_t magic, format;

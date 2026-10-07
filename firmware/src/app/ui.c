@@ -8,15 +8,19 @@
  *                  six materials)
  *   Layout Keyboard every key, white and black, plays its printed note (F3 on the lowest), shifted
  *                  by Transpose (and the octave): a chromatic kalimba with a tine per key
- *   PLAY freeze the grains     REC palm mute (every tine)     ARP Release: Ring / Damp
+ *   PLAY freeze the grains     REC palm mute (every tine)     ARP the mbira pattern on / off: over
+ *                  the chord a chord key picks (Tine, Chords), or the keys held (Keyboard), or MIDI's
  *   OCT- / OCT+    the octave
- *   HOME ENV FX LFO SEL SEQ GLO   the pages: Tine, Body, Space, Grain, Keys, More, Setup (EDIT: the next)
+ *   HOME ENV FX LFO SEL SEQ GLO   the pages: Tine, Body, Space, Grain, Keys, More, Setup; EDIT steps
+ *                  through them and two more: Color (tape, lo-fi, chorus, filter) and Pattern
  *   SELECT material   ALGORITHM scale   PRESETS key (Tine) / transpose (Keyboard)   KNOB 1-4 the page's values
  *   SAVE           saves (it also saves by itself, a few seconds after a change, when quiet) */
 
-enum { V_TINE, V_BODY, V_SPACE, V_GRAIN, V_KEYS, V_MORE, V_SETUP, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Tine", "Body", "Space", "Grain", "Keys", "More", "Setup"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_FX, B_LFO, B_SEL, B_SEQ, B_GLO};
+enum { V_TINE, V_BODY, V_SPACE, V_GRAIN, V_KEYS, V_MORE, V_SETUP, V_COLOR, V_PATTERN, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Tine", "Body", "Space", "Grain", "Keys", "More", "Setup", "Color",
+                                              "Pattern"};
+/* the page each button shows (Color and Pattern have none: EDIT reaches them) */
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_FX, B_LFO, B_SEL, B_SEQ, B_GLO, NB, NB};
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_MATERIAL, P_HARD, P_DECAY, P_TONE},
     {P_BODY, P_BUZZ, P_WAH, P_WAHRATE},
@@ -25,6 +29,8 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_LAYOUT, P_SCALE, P_KEY, P_BLACK},
     {P_FEEDBACK, P_GSPRAY, P_STRUM, P_RELEASE},
     {P_TUNE, P_MIDICH, P_MIDIOUT, P_WIDTH},
+    {P_TAPE, P_LOFI, P_CHORUS, P_FILTER},
+    {P_PATTERN, P_PTEMPO, P_GLIDE, P_TUNING},
 };
 
 #define K_NONE 255                     /* a knob with nothing on it */
@@ -73,6 +79,11 @@ static struct {
     uint32_t frame;
     uint32_t sig[3];
     int8_t oct_shift;                  /* Perform: OCT- / OCT+ black keys held */
+    uint8_t pat_on;                    /* the pattern running (ARP) */
+    uint8_t pool_n;                    /* notes in its chord (0: none given yet) */
+    int16_t kpool[KM_NPOOL];           /* the chord held keys / MIDI notes are building */
+    uint8_t midi_held;                 /* MIDI notes held (a new chord starts when they are all up) */
+    uint8_t pool_fresh;                /* this scan's keys start a new chord (none were held before it) */
     uint8_t frozen;
     int16_t key_cents[NKEYS][4];       /* what each key plucked (to damp it, and its MIDI note off) */
     uint8_t key_n[NKEYS];
@@ -168,14 +179,18 @@ static void turn(int role, int k, int32_t e)
 static int octave_now(void) { return proj.par[P_OCTAVE] + ui.oct_shift; }
 static int keyboard(void) { return proj.par[P_LAYOUT] == LAY_KEYBOARD; }
 /* Keyboard layout: the note of key k (0..26), as printed, transposed */
-static int key_cents(int k) { return km_keyboard_cents(proj.par[P_TRANSPOSE], octave_now(), k); }
+/* just intonation over the key (Tine) or the C key (Keyboard, transposed); Equal: as it is */
+static int tonic_now(void) { return keyboard() ? 6000 + 100 * proj.par[P_TRANSPOSE] : km_tonic_cents(proj.par[P_KEY], 0); }
+static int tune(int c) { return proj.par[P_TUNING] == TUNE_JUST ? km_just_cents(c, tonic_now()) : c; }
+static int key_cents(int k) { return tune(km_keyboard_cents(proj.par[P_TRANSPOSE], octave_now(), k)); }
 static int key_pan(int k) { return (k - 13) * 100 / 13; }       /* across the keyboard, left to right */
-static int white_cents(int w)
+static int white_equal(int w)                       /* (before the tuning: a Sharps key adds its semitone here) */
 {
     if (keyboard())
-        return key_cents(WHITE_K[w & 15]);
+        return km_keyboard_cents(proj.par[P_TRANSPOSE], octave_now(), WHITE_K[w & 15]);
     return km_white_cents(proj.par[P_LAYOUT], proj.par[P_SCALE], proj.par[P_KEY], octave_now(), w);
 }
+static int white_cents(int w) { return tune(white_equal(w)); }
 static int white_pan(int w) { return keyboard() ? key_pan(WHITE_K[w & 15]) : (int)(km_white_pos(w) * 100.0f); }
 static int view_knob(int i)
 {
@@ -224,28 +239,94 @@ static void set_freeze(int on)
     say("GRAINS", on ? "FROZEN" : "LIVE");
 }
 
+/* ------------------------------------------------------------ pattern --- */
+static void pool_set(const int *c, int n)
+{
+    km_pool(c, n);
+    ui.pool_n = (uint8_t)n;
+}
+static int chord_of(int b, int c[4])                /* black key b's chord, tuned: a triad, or a seventh */
+{
+    int n = km_chord_cents(proj.par[P_SCALE], proj.par[P_KEY], octave_now(), b, c), i;
+    if (n == 4 && b < 7)
+        n = 3;                                       /* (the roll's octave: the pattern finds its own) */
+    for (i = 0; i < n; i++)
+        c[i] = tune(c[i]);
+    return n;
+}
+static void pattern(int on)
+{
+    ui.pat_on = (uint8_t)on;
+    km_pattern(on);
+    if (on && !ui.pool_n) {                          /* nothing chosen yet: the key's own chord */
+        int c[4], n;
+        if (keyboard()) {
+            c[0] = key_cents(7);
+            c[1] = key_cents(11);
+            c[2] = key_cents(14);
+            n = 3;
+        } else {
+            n = chord_of(0, c);
+        }
+        pool_set(c, n);
+    }
+    {
+        char t[16];
+        if (on)
+            km_param_text(P_PATTERN, proj.par[P_PATTERN], t);
+        say("PATTERN", on ? t : "OFF");
+    }
+}
+/* a note held toward the pattern's chord: the first of a new hand of notes starts a new chord */
+static void pool_hold(int cents, int first)
+{
+    int i, c[KM_NPOOL];
+    if (first)
+        ui.pool_n = 0;
+    if (ui.pool_n >= KM_NPOOL)
+        return;
+    ui.kpool[ui.pool_n] = (int16_t)cents;
+    for (i = 0; i <= ui.pool_n; i++)
+        c[i] = ui.kpool[i];
+    pool_set(c, ui.pool_n + 1);
+}
+
 static void white_down(int w)
 {
+    if (ui.pat_on && keyboard()) {                   /* Keyboard: the keys held are the pattern's chord */
+        pool_hold(white_cents(w), ui.pool_fresh);
+        ui.pool_fresh = 0;
+        return;
+    }
     key_pluck(WHITE_K[w], white_cents(w), 100, white_pan(w), 0);
 }
 
 static void black_down(int b)
 {
     int k = BLACK_K[b];
-    if (keyboard()) {                                /* its own note */
-        key_pluck(k, key_cents(k), 100, key_pan(k), 0);
+    if (keyboard()) {                                /* its own note (or, with the pattern, toward its chord) */
+        if (ui.pat_on)
+            pool_hold(key_cents(k), ui.pool_fresh), ui.pool_fresh = 0;
+        else
+            key_pluck(k, key_cents(k), 100, key_pan(k), 0);
         return;
     }
     switch (proj.par[P_BLACK]) {
     case BLK_CHORDS: {
-        int c[4], n = km_chord_cents(proj.par[P_SCALE], proj.par[P_KEY], octave_now(), b, c), i;
+        int c[4], n, i;
+        if (ui.pat_on) {                             /* the pattern takes up the chord */
+            n = chord_of(b, c);
+            pool_set(c, n);
+            break;
+        }
+        n = km_chord_cents(proj.par[P_SCALE], proj.par[P_KEY], octave_now(), b, c);
         for (i = 0; i < n; i++)                      /* a thumb across the tines: low to high, side to side */
-            key_pluck(k, c[i], i ? 92 : 100, (i & 1) ? 55 : -55, i * proj.par[P_STRUM]);
+            key_pluck(k, tune(c[i]), i ? 92 : 100, (i & 1) ? 55 : -55, i * proj.par[P_STRUM]);
         break;
     }
     case BLK_SHARPS: {
         int w = BLACK_LEFT[b];
-        key_pluck(k, white_cents(w) + 100, 100, white_pan(w), 0);
+        key_pluck(k, tune(white_equal(w) + 100), 100, white_pan(w), 0);
         break;
     }
     default:                                         /* Perform */
@@ -298,10 +379,7 @@ static void button(int b)
         km_damp_all();
         say("PALM", "MUTE");
         break;
-    case B_ARP:
-        knob_set(P_RELEASE, !proj.par[P_RELEASE]);
-        say("RELEASE", proj.par[P_RELEASE] ? "DAMP" : "RING");
-        break;
+    case B_ARP: pattern(!ui.pat_on); break;
     case B_OCTDN: case B_OCTUP:
         knob_set(P_OCTAVE, proj.par[P_OCTAVE] + (b == B_OCTUP ? 1 : -1));
         say_param(P_OCTAVE);
@@ -351,24 +429,34 @@ static void midi_cc(uint32_t cc, uint32_t v)
     }
 }
 
-/* MIDI in (USB and the TRS jack: one queue). Notes pluck the tine of their pitch (12-TET, Tune applied),
- * velocity is how hard; note off damps it when Release is Damp (the pedal holds it). Channel: Setup's
- * MIDI ch (Omni: all). */
+/* MIDI in (USB and the TRS jack: one queue). Notes pluck the tine of their pitch (Tuning and Tune
+ * applied), velocity is how hard; note off damps it when Release is Damp (the pedal holds it). With the
+ * pattern on, the notes held are its chord instead. Clock (any channel) leads the pattern. Channel:
+ * Setup's MIDI ch (Omni: all). */
 static void midi_in(void)
 {
     uint32_t pkt;
     while (plat_midi_in(&pkt)) {
         uint32_t st = (pkt >> 8) & 0xFFu, d1 = (pkt >> 16) & 0x7Fu, d2 = (pkt >> 24) & 0x7Fu, type = st & 0xF0u;
+        if (st == 0xF8u || st == 0xFAu || st == 0xFBu || st == 0xFCu) {   /* clock: the pattern follows it */
+            km_clock(st == 0xF8u ? KM_CLK_TICK : st == 0xFAu ? KM_CLK_START : st == 0xFBu ? KM_CLK_CONTINUE : KM_CLK_STOP);
+            continue;
+        }
         if (st >= 0xF0u)
-            continue;                                       /* clock, sysex: not ours */
+            continue;                                       /* sysex and the rest: not ours */
         if (proj.par[P_MIDICH] && (st & 0x0Fu) + 1u != (uint32_t)proj.par[P_MIDICH])
             continue;
         if (type == 0x90u && d2) {
-            int c = (int)d1 * 100;
-            km_pluck(c, (int)d2, midi_pan(c), 0);
+            int c = tune((int)d1 * 100);
+            if (ui.pat_on)                                  /* the pattern's chord, as held */
+                pool_hold(c, ui.midi_held++ == 0u);
+            else
+                km_pluck(c, (int)d2, midi_pan(c), 0);
         } else if (type == 0x80u || type == 0x90u) {
-            if (proj.par[P_RELEASE])
-                km_damp((int)d1 * 100);
+            if (ui.midi_held)
+                ui.midi_held--;
+            if (proj.par[P_RELEASE] && !ui.pat_on)
+                km_damp(tune((int)d1 * 100));
         } else if (type == 0xB0u) {
             midi_cc(d1, d2);
         } else if (type == 0xC0u) {
@@ -401,6 +489,7 @@ static void input(void)
         }
     }
     ch = keys ^ ui.keys;
+    ui.pool_fresh = !ui.keys;                    /* (several keys down in one scan: one new chord) */
     ui.keys = keys;
     for (i = 0; i < NBLACK; i++)                       /* black first: an octave key held changes the tines */
         if (ch >> BLACK_K[i] & 1u) {
@@ -491,6 +580,7 @@ static void draw_header(void)
     char t[24];
     int msg = plat_ms() < ui.msg_until;
     uint32_t h = hash(hash(2166136261u, ui.view | (uint32_t)ui.frozen << 8 | (uint32_t)proj.par[P_RELEASE] << 9 |
+                                            (uint32_t)ui.pat_on << 12 | (uint32_t)(ui.pat_on && km_pat_pulse % 3u == 0u) << 13 |
                                             (uint32_t)ui.dirty << 10 | (uint32_t)msg << 11),
                       (uint32_t)proj.par[P_KEY] | (uint32_t)proj.par[P_SCALE] << 4 | (uint32_t)proj.par[P_MATERIAL] << 12 |
                           (uint32_t)proj.par[P_LAYOUT] << 16 | (uint32_t)(proj.par[P_TRANSPOSE] + 12) << 18);
@@ -545,6 +635,13 @@ static void draw_header(void)
             w = text_w(&FONT_XS, "FRZ") + 10;
             cv_round(x, 6, w, 16, 6, K_BLUE_T);
             cv_text(x + 5, 7, &FONT_XS, "FRZ", K_BLUE);
+            x += w + 4;
+        }
+        if (ui.pat_on) {                             /* the pattern: bright on the beat */
+            int beat = km_pat_pulse % 3u == 0u;
+            w = text_w(&FONT_XS, "PAT") + 10;
+            cv_round(x, 6, w, 16, 6, beat ? K_ACC : K_ACC_T);
+            cv_text(x + 5, 7, &FONT_XS, "PAT", beat ? K_WHITE : K_ACC);
             x += w + 4;
         }
         if (proj.par[P_RELEASE]) {
@@ -749,10 +846,10 @@ static void draw_knobs(void)
 
 static void leds(void)
 {
-    uint32_t b = 1u << VIEW_BTN[ui.view], k = 0, i;
+    uint32_t b = VIEW_BTN[ui.view] < NB ? 1u << VIEW_BTN[ui.view] : 0u, k = 0, i;
     if (ui.frozen)
         b |= 1u << B_PLAY;
-    if (proj.par[P_RELEASE])
+    if (ui.pat_on && km_pat_pulse % 3u != 0u)        /* the pattern: lit, dark on each beat */
         b |= 1u << B_ARP;
     if (keyboard()) {
         for (i = 0; i < NKEYS; i++)                  /* the tines that ring, every key */
@@ -772,15 +869,16 @@ static void leds(void)
     plat_leds(b, k);
 }
 
-/* AUTOSAVE: a few seconds after a change, when nothing rings and nothing is touched (a flash erase
- * silences the audio for a moment) */
+/* AUTOSAVE: a few seconds after a change, when nothing rings and nothing is touched: a flash erase
+ * silences the audio for a moment, so it waits for the output itself to be quiet (reverb and echo
+ * tails too: cutting one was a click) */
 #define AUTOSAVE_QUIET 4000u
 static void autosave(void)
 {
     uint32_t now = plat_ms(), i;
     /* frozen grains are a drone that never ends: no erase under it. Live grains only replay what the
      * tines just played, so they don't count as sound (with Grains up they never stop spawning) */
-    if (!ui.dirty || ui.btn || ui.keys || now - ui.act_t < AUTOSAVE_QUIET || ui.frozen)
+    if (!ui.dirty || ui.btn || ui.keys || now - ui.act_t < AUTOSAVE_QUIET || ui.frozen || km_out_level > 0.0005f)
         return;
     for (i = 0; i < KM_NVOICE; i++)
         if (km_voice_level[i] > 0.0f)

@@ -21,8 +21,9 @@ expect tine6700 >5
 expect tine7100 >5
 expect tine7400 >5
 key b4 up
-# Release Damp (ARP): letting go of a chord key damps its roll
-tap ARP
+# Release Damp (More page, KNOB 4): letting go of a chord key damps its roll
+tap SEQ
+spin K4 1
 expect par23 1
 key b1 down
 wait 200
@@ -30,8 +31,9 @@ expect tine6200 >5
 key b1 up
 wait 400
 expect tine6200 <2
-tap ARP
+spin K4 -1
 expect par23 0
+tap SEL
 # Sharps: b0 is w0's tine (C6 in Tine layout) a semitone up
 spin K4 1
 expect par19 1

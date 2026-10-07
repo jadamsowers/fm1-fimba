@@ -10,7 +10,8 @@ midi 80 3C 00
 wait 300
 expect tine6000 >5
 # Release Damp: note off (and note on with velocity 0) damp
-tap ARP
+tap SEQ
+spin K4 1
 midi 80 3C 00
 midi 93 48 00
 wait 300

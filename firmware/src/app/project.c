@@ -13,15 +13,22 @@ void project_defaults(void)
         proj.par[i] = km_param_info(i)->def;
 }
 
-static int project_valid(void)
+/* A project of this format loads. Each value out of its range (a setting this version added, that an older
+ * project has no room for, or one whose range has changed) takes its default; the rest are kept. */
+static int project_valid(int bytes)
 {
-    int i;
-    if (proj.magic != PROJ_MAGIC || proj.format != PROJ_FORMAT)
+    int i, have = (bytes - 8) / 2;               /* the values the saved project holds */
+    if (proj.magic != PROJ_MAGIC || (proj.format != PROJ_FORMAT && proj.format != 1u))
         return 0;
+    if (proj.format == 1u) {                     /* its spare bytes (zeros) are not settings */
+        if (have > PROJ_FORMAT1_NPAR)
+            have = PROJ_FORMAT1_NPAR;
+        proj.format = PROJ_FORMAT;
+    }
     for (i = 0; i < P_NPARAMS; i++) {
         const km_param_t *p = km_param_info(i);
-        if (proj.par[i] < p->lo || proj.par[i] > p->hi)
-            return 0;
+        if (i >= have || proj.par[i] < p->lo || proj.par[i] > p->hi)
+            proj.par[i] = p->def;
     }
     return 1;
 }
@@ -31,7 +38,7 @@ int project_load(void)
     int n;
     memset(&proj, 0, sizeof proj);
     n = plat_store_load(OBJ_PROJ, &proj, sizeof proj);
-    if (n >= 8 && project_valid())
+    if (n >= 8 && project_valid(n))
         return 0;
     project_defaults();
     return -1;
