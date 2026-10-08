@@ -1,0 +1,32 @@
+# the Mirror layout: the Tine layout right for left, the lowest tine (C4) left of the middle (w7),
+# D4 on its right, E4 on its left; the black keys work as in Tine
+# (params: 16 Layout 19 Black)
+expect par16 0
+expect white8 6000
+expect white7 6200
+tap SEL
+spin K1 2
+expect par16 2
+expect white7 6000
+expect white8 6200
+expect white6 6400
+expect white0 8400
+expect white15 8600
+tapkey w7
+tapkey w8
+wait 30
+expect tine6000 >5
+expect tine6200 >5
+wait 50
+shot mirror.png
+# Chords: b0 still rolls C (C4 E4 G4 C5)
+key b0 down
+wait 150
+expect tine6400 >5
+expect tine6700 >5
+key b0 up
+# kept over a reboot
+tap SAVE
+reboot
+expect par16 2
+expect white7 6000

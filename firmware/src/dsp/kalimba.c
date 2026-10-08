@@ -80,10 +80,12 @@ int km_degree_cents(int s, int d)
 static int tonic(int key, int octave) { return 6000 + 100 * (key >= 6 ? key - 12 : key) + 1200 * octave; }
 
 /* Tine: the kalimba's own layout, the longest (lowest) tine in the middle and the scale alternating
- * outward, left right left right, so each thumb has every other note and thirds lie side by side:
+ * outward, left right left right, so each thumb has every other note and thirds lie side by side (the
+ * 17-key kalimba in C, D6 .. C4 .. E6, without its top E6):
  *   w:      0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15
- *   degree 14  12  10   8   6   4   2   0   1   3   5   7   9  11  13  15 */
-static int white_degree(int w) { return w <= 7 ? 2 * (7 - w) : 2 * (w - 8) + 1; }
+ *   degree 15  13  11   9   7   5   3   1   0   2   4   6   8  10  12  14
+ * Mirror is the same kalimba right for left: the lowest tine on w7, the next up on its right */
+static int white_degree(int w) { return w >= 8 ? 2 * (w - 8) : 2 * (7 - w) + 1; }
 
 int km_tonic_cents(int key, int octave) { return tonic(key, octave); }
 
@@ -98,8 +100,8 @@ int km_just_cents(int cents, int tonic_cents)
 
 int km_white_cents(int layout, int scale, int key, int octave, int w)
 {
-    (void)layout;                                 /* the Keyboard layout plays km_keyboard_cents */
-    return tonic(key, octave) + km_degree_cents(scale, white_degree(w & 15));
+    /* (the Keyboard layout plays km_keyboard_cents) */
+    return tonic(key, octave) + km_degree_cents(scale, white_degree(layout == LAY_MIRROR ? 15 - (w & 15) : w & 15));
 }
 
 /* Keyboard: the FM-1's keys as printed, F3 (MIDI 53) on the lowest, chromatic up to G5 */
@@ -181,7 +183,7 @@ void km_param_text(int i, int v, char *b)
 {
     static const char *const ONOFF[2] = {"Off", "On"};
     static const char *const BODY[BODY_N] = {"None", "Board", "Box", "Gourd"};
-    static const char *const LAY[LAY_N] = {"Tine", "Keyboard"};
+    static const char *const LAY[LAY_N] = {"Tine", "Keyboard", "Mirror"};
     static const char *const BLK[BLK_N] = {"Chords", "Sharps", "Perform"};
     static const char *const GP[GP_N] = {"-12", "-7", "0", "+7", "+12", "+19", "Shimmer", "Reverse"};
     static const char *const REL[2] = {"Ring", "Damp"};
