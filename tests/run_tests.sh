@@ -53,8 +53,13 @@ if command -v emcc >/dev/null 2>&1; then
     run emu sh -c "sh web/emu/build.sh >/dev/null 2>&1 && node tests/host/emu_test.mjs build/emu/kalimba.wasm"
     CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     [ -x "$CHROME" ] || CHROME="$(command -v google-chrome || command -v chromium || true)"
+    # the installer as the page ships it, against a simulated FM-1
+    run updater node tests/web/updater_test.mjs
     if [ -n "$CHROME" ]; then
         run standalone node tests/host/standalone_test.mjs "$CHROME"
+        if [ -f build/fimba.fwsc ]; then       # the installer's buttons, end to end (needs a firmware build)
+            run installer-page node tests/web/installer_page_test.mjs "$CHROME"
+        fi
     fi
 fi
 for s in tests/scenarios/*.kal; do

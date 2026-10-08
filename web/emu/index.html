@@ -51,6 +51,26 @@ a { color: var(--accent); }
 kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); border: 1px solid var(--rule); border-radius: 4px; padding: 0 .3em; color: var(--ink); }
 .midi { color: var(--muted); }
 .midi b { color: var(--teal); font-weight: 600; }
+/* the installer */
+.install { margin: 1.8rem 0 0; padding: 1.1rem 1.2rem 1.2rem; background: var(--card); border: 1px solid var(--rule); border-radius: 14px; }
+.install h2 { font: 700 1.35rem "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0 0 .5rem; }
+.install h3 { font: 600 1.05rem "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0; display: inline; }
+.install p, .install ol { margin: .45rem 0; max-width: 72ch; }
+.install ol { padding-left: 1.3rem; color: var(--muted); }
+.install .warn { border-left: 3px solid var(--accent); padding: .35rem .7rem; background: var(--ground); border-radius: 0 8px 8px 0; }
+.install .row { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center; margin: .7rem 0; }
+.install button { font: 600 1rem "Barlow Semi Condensed", "Barlow", sans-serif; letter-spacing: .02em; padding: .5em 1.1em; border-radius: 999px;
+                  border: 1px solid var(--accent); background: var(--accent); color: #2a140a; cursor: pointer; }
+.install button.quiet { background: transparent; color: var(--ink); border-color: var(--rule); }
+.install button:disabled { opacity: .45; cursor: not-allowed; }
+.install input[type=file] { font: inherit; color: var(--muted); max-width: 100%; }
+.install progress { width: 100%; max-width: 32rem; height: .6rem; accent-color: var(--accent); }
+.install .status { font-weight: 600; min-height: 1.5em; }
+.install .what { color: var(--muted); font-variant-numeric: tabular-nums; }
+.install details { margin: .8rem 0 0; }
+.install summary { cursor: pointer; color: var(--muted); }
+.install pre { max-height: 12rem; overflow: auto; font: .8rem ui-monospace, Menlo, monospace; color: var(--muted); background: var(--ground);
+               padding: .5rem; border-radius: 8px; white-space: pre-wrap; }
 </style>
 <main>
 <header>
@@ -73,6 +93,45 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
   <span class="midi" id="midistat"></span>
   <button id="reset" type="button" title="Forget your sound and settings, and start again from the factory settings">Factory reset</button>
 </div>
+
+<section class="install" id="install" aria-labelledby="install-h">
+  <h2 id="install-h">Install on your FM-1</h2>
+  <p class="warn"><b>Beta: FiMba-1 has not yet run on a real FM-1.</b> It builds, and passes its tests here and in the
+    simulator, but the first boot on hardware is still to come. Install at your own risk. Before you do, download
+    M-VAVE's stock firmware (FM-1 V15, "PC Firmware" at <a href="https://www.m-vave.com/download" target="_blank" rel="noopener">m-vave.com/download</a>)
+    so you can go back (below).</p>
+  <ol>
+    <li>Connect the FM-1 to this computer with a USB data cable, directly (no hub, probe or Transporter). Close other apps that use MIDI.</li>
+    <li>Use Chrome or Edge, and allow MIDI (with SysEx) when the browser asks.</li>
+    <li>Press Install. Don't unplug or close this page while it writes (about a minute). The FM-1 restarts into FiMba-1 and shows its version.</li>
+  </ol>
+  <div class="row">
+    <button id="instLatest" type="button" disabled>Install FiMba-1</button>
+    <span class="what" id="instWhat">Looking for the latest release&hellip;</span>
+  </div>
+  <div class="row">
+    <label for="instFile">Or a firmware file (<code>.fwsc</code>), from a release or a pull request's build:</label>
+    <input type="file" id="instFile" accept=".fwsc">
+    <button id="instFileGo" type="button" class="quiet" disabled>Install this file</button>
+  </div>
+  <progress id="instBar" max="100" value="0" aria-label="Install progress"></progress>
+  <p class="status" id="instStatus" role="status" aria-live="polite"></p>
+  <details>
+    <summary><h3>Back to the stock firmware</h3></summary>
+    <p>This writes M-VAVE's own FM-1 V15 back, from FiMba-1 (or its safe mode, or any Felucca-family firmware) over the
+      same USB cable. Choose the file you downloaded from M-VAVE: it is checked (SHA-256) before anything is written.
+      If the FM-1 doesn't start at all, it comes up in safe mode after two tries, where this still works; past that,
+      <code>tools/fm1_rescue.py</code> in the repository restores it from a Mac.</p>
+    <div class="row">
+      <input type="file" id="stockFile" accept=".fwsc" aria-label="M-VAVE's FM-1 V15 file">
+      <button id="stockGo" type="button" class="quiet" disabled>Install the stock firmware</button>
+    </div>
+  </details>
+  <details>
+    <summary>Log</summary>
+    <pre id="instLog"></pre>
+  </details>
+</section>
 
 <section class="help">
   <div>
@@ -466,4 +525,123 @@ document.getElementById("reset").addEventListener("click", () => {
     document.getElementById("reset").textContent = "Click again to forget everything";
   }
 });
+</script>
+
+<script type="module">
+/* the installer: Felucca's update protocol (web/fm1pkg.js, web/fm1ota.js, inlined at build time) over Web MIDI.
+   The latest release's package sits next to this page on GitHub Pages (firmware/latest.json, put there by CI). */
+/*FM1LIB*/
+const $ = (id) => document.getElementById(id);
+const STOCK_SHA256 = "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a";   /* M-VAVE FM-1 V15 */
+const ERR = {
+  denied: "MIDI (SysEx) access was not allowed. Allow MIDI in the site settings (the address bar) and press Install again.",
+  notfound: "FM-1 not found. Check the USB cable (a data cable, not charge-only), close other apps that use MIDI, and press Install again.",
+  model: "The connected device is not an FM-1.",
+  lost: "The USB connection was lost. Replug it and press Install again: an install picks up where it stopped.",
+  stopped: "It stopped part-way. Replug the USB cable and press Install again: an install picks up where it stopped.",
+  noloader: "The FM-1 in update mode was not found. Replug the USB cable and press Install again (it stays in update mode until it is finished).",
+  noreturn: "The FM-1 did not come back. Power-cycle it.",
+  mismatch: "Written, but the FM-1 reports another version: ",
+  badreq: "The FM-1 asked for something the package doesn't have: is it the right file? ",
+};
+let latest = null, chosen = null, stock = null, writing = false;
+const status = (t) => { $("instStatus").textContent = t; };
+const log = (t) => { $("instLog").textContent += t + "\n"; };
+const sync = () => {
+  $("instLatest").disabled = writing || !latest || !navigator.requestMIDIAccess;
+  $("instFileGo").disabled = writing || !chosen || !navigator.requestMIDIAccess;
+  $("stockGo").disabled = writing || !stock || !navigator.requestMIDIAccess;
+};
+window.addEventListener("beforeunload", (e) => { if (writing) { e.preventDefault(); e.returnValue = "Writing to the FM-1. Don't close the page."; } });
+
+function readPackage(raw, what) {                      /* a .fwsc: its identity and the image the device reads */
+  const product = productOf(raw);
+  if (!/^FM-1_\d+$/.test(product)) throw new Error(`${what} is not an FM-1 firmware package`);
+  return { image: logicalImage(raw), product };
+}
+
+(async () => {
+  if (!navigator.requestMIDIAccess) {
+    $("instWhat").textContent = "";
+    status("Installing needs Web MIDI: open this page in Chrome or Edge.");
+    return;
+  }
+  try {
+    const meta = await (await fetch("firmware/latest.json", { cache: "no-cache" })).json();
+    const raw = new Uint8Array(await (await fetch("firmware/" + meta.file, { cache: "no-cache" })).arrayBuffer());
+    latest = { ...readPackage(raw, meta.file), version: meta.version };
+    if (latest.product !== meta.product) throw new Error("the package's identity is not the release's");
+    $("instLatest").textContent = `Install FiMba-1 ${meta.version}`;
+    $("instWhat").textContent = `the latest release (${meta.product})`;
+  } catch (e) {
+    $("instWhat").textContent = "No release package here: choose a file below.";
+  }
+  sync();
+})();
+
+$("instFile").addEventListener("change", async (e) => {
+  chosen = null;
+  const f = e.target.files && e.target.files[0];
+  if (f) {
+    try {
+      chosen = readPackage(new Uint8Array(await f.arrayBuffer()), f.name);
+      status(`${f.name}: ${chosen.product}. Press Install this file.`);
+    } catch (err) { status(err.message); }
+  }
+  sync();
+});
+
+$("stockFile").addEventListener("change", async (e) => {
+  stock = null;
+  const f = e.target.files && e.target.files[0];
+  if (f) {
+    try {
+      const raw = new Uint8Array(await f.arrayBuffer());
+      const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", raw))].map((b) => b.toString(16).padStart(2, "0")).join("");
+      if (hex !== STOCK_SHA256) status("That is not M-VAVE's FM-1 V15 file. Choose the file from M-VAVE's download page.");
+      else { stock = readPackage(raw, f.name); status("That is M-VAVE's FM-1 V15. Press Install the stock firmware."); }
+    } catch (err) { status(err.message); }
+  }
+  sync();
+});
+
+async function run(pkg, label, isStock) {
+  let midi;
+  try { midi = await navigator.requestMIDIAccess({ sysex: true }); }
+  catch (e) { status(ERR.denied); return; }
+  writing = true;
+  sync();
+  $("instBar").value = 0;
+  const reads = Math.ceil(pkg.image.length / 512), total = 80 + reads;
+  const step = (k, a) => {
+    log(`${k} ${a ?? ""}`);
+    if (k === "start") status(`Starting: ${a ?? ""}`);
+    if (k === "verify") { status("Checking the package (nothing written yet)"); $("instBar").value = Math.min(a, 80) / total * 100; }
+    if (k === "loader") status("Switching the FM-1 to update mode");
+    if (k === "write") { status(`Writing ${label}: don't unplug`); $("instBar").value = (80 + a) / total * 100; }
+    if (k === "reboot") status("Restarting");
+    if (k === "done") { $("instBar").value = 100; status(isStock ? "Done: the FM-1 has restarted with its original firmware." : `Done: the FM-1 has restarted with ${label} (${a}).`); }
+  };
+  try {
+    const up = new Updater(midi, log);
+    const ota = await up.find((id) => /^ota-/i.test(id.model));
+    if (ota) {                                       /* already in update mode: resume the write */
+      ota.link.close();
+      if (await up.resume(pkg.image, step)) step("done", pkg.product);
+      else status(ERR.stopped);
+    } else {
+      await up.install(pkg.image, pkg.product, step);
+    }
+  } catch (e) {
+    if (isStock && e && e.code === "mismatch") { $("instBar").value = 100; status("Done: the FM-1 has restarted with its original firmware."); }
+    else status((e && e.code && ERR[e.code] ? ERR[e.code] + (e.detail || "") : "Error: " + (e && e.message)));
+    log(String((e && e.stack) || e));
+  }
+  writing = false;
+  sync();
+}
+
+$("instLatest").addEventListener("click", () => latest && run(latest, `FiMba-1 ${latest.version}`, false));
+$("instFileGo").addEventListener("click", () => chosen && run(chosen, chosen.product, false));
+$("stockGo").addEventListener("click", () => stock && run(stock, "the stock firmware", true));
 </script>

@@ -13,6 +13,7 @@ complete corresponding source under the same licence.
 | `firmware/src/app/{panel,plat_fm1,main_fm1}.c`, `firmware/src/main.c`, `host/kalimba_host.c`, the frame of `firmware/src/app/ui.c` (bands, knobs, autosave) and `project.c` | adapted from FoMni (itself from X0X and Felucca) | GPL-3.0-only |
 | `firmware/src/dsp/fastmath.h`; the plate reverb in `firmware/src/dsp/kalimba.c` (Dattorro's design) | FoMni / X0X | GPL-3.0-only |
 | Platform tests (`tests/host/{fastmath,encoder,uac,trs}_test.c`, `tests/{storage,ota,ldr}_test.c`, `tests/install_test.py`) | FoMni / Felucca | GPL-3.0-only |
+| The simulated FM-1 for the web installer's tests (`tests/web/fake_fm1.mjs`) and the installer panel's protocol use (`web/fm1ota.js`, `web/fm1pkg.js`, inlined into the page) | Felucca's `web/test_web.mjs` and update modules, by way of FoMni's web installer | GPL-3.0-only |
 | Everything else: the tine, body, buzz, grain and delay engine and the music (`firmware/src/dsp/kalimba.{c,h}`), the UI's instrument, `tests/host/kalimba_test.c`, `tests/scenarios/` | FiMba-1 | GPL-3.0-only |
 
 ## Third-party material

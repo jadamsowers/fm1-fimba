@@ -4,9 +4,11 @@
 #   pull request      the full test suite; the firmware package built and checked; both kept with the
 #                     run as downloads ("fimba-firmware", "FiMba-1-web")
 #   push to main      the same, then the browser version published to
-#                     https://jadamsowers.github.io/fm1-fimba/
+#                     https://jadamsowers.github.io/fm1-fimba/, with the latest release's firmware
+#                     beside it for the page's installer (firmware/latest.json)
 #   tag vX.Y[.Z]      the same, with a release build (identity FM-1_8XXYYZZ, version on the splash),
-#                     published as a GitHub Release with the .fwsc and the one-file web app
+#                     published as a GitHub Release with the .fwsc and the one-file web app, and the
+#                     site republished with that firmware in its installer
 name: Test, build and publish
 
 on:
@@ -60,11 +62,12 @@ jobs:
           path: build/scenarios/
           if-no-files-found: ignore
 
-      - name: Package the site for Pages
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v5
+      - name: Keep the site for the Pages job
+        uses: actions/upload-artifact@v7
         with:
-          path: site
+          name: site
+          path: site/
+          include-hidden-files: true
 
   firmware:
     name: Firmware package
@@ -124,18 +127,51 @@ jobs:
             build/fimba*.fwsc
             build/fimba.bin
 
-  deploy:
-    name: Publish the web app to GitHub Pages
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: web                   # (not the firmware: the site doesn't wait on JieLi's toolchain sources)
+  pages:
+    name: Publish the web app (and its installer's firmware) to GitHub Pages
+    # main: the latest release's firmware goes beside the page. A tag: that release's, once it's out.
+    if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && needs.web.result == 'success' && needs.release.result != 'failure'
+    needs: [web, release]
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: site
+
+      - name: The latest release's firmware, for the installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')
+          if [ -z "$tag" ]; then echo "no release yet: the installer offers a file chooser only"; exit 0; fi
+          mkdir -p site/firmware
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern 'fimba-*.fwsc' --dir site/firmware
+          file=$(cd site/firmware && ls fimba-*.fwsc | head -1)
+          python3 - "$tag" "$file" <<'PY'
+          import json, sys
+          sys.path.insert(0, "tools")
+          from fm1_install import product_of
+          tag, f = sys.argv[1], sys.argv[2]
+          raw = open("site/firmware/" + f, "rb").read()
+          meta = {"version": tag.lstrip("v"), "product": product_of(raw), "file": f}
+          open("site/firmware/latest.json", "w").write(json.dumps(meta))
+          print("installer:", meta)
+          PY
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5

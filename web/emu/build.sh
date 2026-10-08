@@ -13,7 +13,8 @@ emcc -O2 -ffp-contract=off -std=gnu99 -Wall -Wno-unused-function -Wno-unused-par
     -DOM_HOST -DOM_WEB "-DOM_VERSION=\"$(printf %s "${OM_VERSION:-DEV}" | tr a-z A-Z)\"" -Ifirmware/src -Ifirmware/src/dsp -Ibuild/gen \
     --no-entry -sSTANDALONE_WASM -sSTACK_SIZE=1048576 -sINITIAL_MEMORY=33554432 -sFILESYSTEM=0 \
     -o build/emu/kalimba.wasm web/emu/kalimba_web.c firmware/src/dsp/kalimba.c
-cp web/emu/index.html web/emu/worklet.js build/emu/
+cp web/emu/worklet.js build/emu/
+"$PY" web/emu/inline_lib.py web/emu/index.html build/emu/index.html   # the installer's modules, inlined
 echo "emu: build/emu ($(wc -c < build/emu/kalimba.wasm) B wasm)"
 # one file that runs from the filesystem, no web server
 "$PY" web/emu/make_standalone.py build/emu build/emu/FiMba-1.html

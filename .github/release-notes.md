@@ -21,7 +21,9 @@ Or play it online: <https://jadamsowers.github.io/fm1-fimba/>
    (no sound, USB on), where you can reinstall. After four failed starts it enters the chip's own
    update mode, which the package can't overwrite, and `tools/fm1_rescue.py` puts stock firmware
    back. FoMni's web installer can also restore it.
-2. **Install over USB**, from a checkout of this repository (`pip install -r requirements.txt`):
+2. **Install from the web page**: <https://jadamsowers.github.io/fm1-fimba/#install> (Chrome or Edge):
+   connect the FM-1 by USB and press Install. Or **over USB from the command line**, from a checkout
+   of this repository (`pip install -r requirements.txt`):
    ```
    python3 tools/fm1_install.py --info                   # finds the FM-1, writes nothing
    python3 tools/fm1_install.py fimba-VERSION.fwsc

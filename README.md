@@ -455,6 +455,15 @@ model the FM-1 would run.
 - **MIDI:** "Connect MIDI" uses Web MIDI (Chrome or Edge).
 - **Saving:** SAVE keeps your settings in that browser.
 
+### Installing from the page
+
+The same page installs FiMba-1 on your FM-1 (Chrome or Edge: it uses Web MIDI with SysEx), using
+Felucca's update protocol, the one the command-line installer speaks. Connect the FM-1 by USB and
+press **Install FiMba-1 X.Y.Z** to install the latest release. Or choose any `.fwsc` file (a release,
+a pull request's build) and press **Install this file**. Under **Back to the stock firmware**, choose
+M-VAVE's own FM-1 V15 file; it's checked (SHA-256) before anything is written. An interrupted install
+picks up where it stopped when you press Install again.
+
 The site is rebuilt and published by GitHub Actions whenever a change reaches `main`. Every pull
 request is built and tested first ([below](#continuous-integration)). To build it yourself (needs
 Emscripten), run `web/emu/build.sh`. It makes `build/emu/`, including `build/emu/FiMba-1.html`, all
@@ -474,7 +483,8 @@ python3 tools/fm1_install.py --info    # check the installer finds your FM-1 (wr
 python3 tools/fm1_install.py build/fimba.fwsc
 ```
 
-Or download a ready-built package from the [releases](https://github.com/jadamsowers/fm1-fimba/releases).
+Or download a ready-built package from the [releases](https://github.com/jadamsowers/fm1-fimba/releases),
+or install the latest one straight from the [web page](https://jadamsowers.github.io/fm1-fimba/#install).
 
 - **The host simulator** (`build/host/kalimba_host SCRIPT OUTDIR`) runs the whole firmware on a
   computer from a script (`tests/scenarios/*.kal`): screenshots, audio and the MIDI it sends come
@@ -486,6 +496,9 @@ Or download a ready-built package from the [releases](https://github.com/jadamso
   - that nothing clicks;
   - every effect, the patterns and MIDI clock, and a 20-minute run;
   - and it writes one WAV per material to `build/host/materials/`.
+- **The installer's tests** run the update protocol as the page ships it against a simulated FM-1
+  (`tests/web/updater_test.mjs`). With Chrome, they also press the page's own Install buttons end to
+  end (`tests/web/installer_page_test.mjs`).
 
 ### Installing safely
 
@@ -520,8 +533,8 @@ When each part runs:
 | When | What happens |
 |---|---|
 | A pull request | Both jobs; the firmware (`fimba-firmware`) and the one-file web app (`FiMba-1-web`) can be downloaded from the run to try before merging |
-| A push to `main` (a merged pull request) | Both jobs, then the browser version is published to GitHub Pages |
-| A tag `vX.Y.Z` | A release build: the version shows on the splash screen, and the package identity is FM-1_8XXYYZZ. It's published as a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with `fimba-X.Y.Z.fwsc` and `FiMba-1.html`. |
+| A push to `main` (a merged pull request) | Both jobs, then the browser version is published to GitHub Pages, with the latest release's firmware beside it for the page's installer |
+| A tag `vX.Y.Z` | A release build: the version shows on the splash screen, and the package identity is FM-1_8XXYYZZ. It's published as a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with `fimba-X.Y.Z.fwsc` and `FiMba-1.html`, and the site's installer moves to it |
 
 To make a release:
 
