@@ -152,7 +152,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')
+          # the highest version among the published releases (not the newest-dated: a release is dated
+          # by its commit, so v0.2.0 tagged on v0.1.0's commit sorts as older)
+          tag=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,isDraft \
+                  --jq '.[] | select(.isDraft | not) | .tagName' | grep -E '^v[0-9]+\.[0-9]+' | sort -V | tail -1)
           if [ -z "$tag" ]; then echo "no release yet: the installer offers a file chooser only"; exit 0; fi
           mkdir -p site/firmware
           gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern 'fimba-*.fwsc' --dir site/firmware
