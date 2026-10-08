@@ -241,8 +241,8 @@ Each page puts up to four values on KNOB 1–4. The values are saved with your s
 | -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Body     | None, Board, Box, Gourd (Box) | None: the bare tine. Board: a plank, thin and bright, with a woody knock. Box: a hollow box with a sound hole, warm, with a bloom around 200 Hz. Gourd: a calabash resonator, boomy, hollow and dark. All at about the same loudness. |
 | Buzz     | 0–100 (0)                     | Mbira buzzers (bottle caps, shells) that rattle when the body moves past a threshold                                                                                                                                                  |
-| Wah      | 0–100 (0)                     | How much of the sound hole a hand covers: the sound comes out muffled, like a vowel closing, and a little quieter (Box and Gourd only: Board and None have no hole)                                                                   |
-| Wah rate | Off, 1–100 (Off)              | Off: the hole moves only with the Wah knob, the mod wheel, pressure or the Hole key. Above that, a hand fluttering over it, 0.1 to 8 Hz.                                                                                              |
+| Wah      | 0–100 (0)                     | How much wah: how far a hand covers the sound hole, muffling the sound like a vowel closing. With Wah rate on, how far the fluttering hand goes (Box and Gourd only: Board and None have no hole)                                     |
+| Wah rate | Off, 1–100 (Off)              | Off: the hand stays where Wah puts it (the mod wheel, pressure and the Hole key add to it). Above that, it flutters from open to Wah and back, 0.1 to 8 Hz.                                                                           |
 
 **FX → Space**
 

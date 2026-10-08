@@ -4,6 +4,13 @@ A release is a push to `main` that changes `VERSION` to a version with no tag ye
 release build, tags the commit `vX.Y.Z` and publishes the GitHub Release with that version's notes,
 taken from its section below. Add the section in the same pull request as the `VERSION` change.
 
+## 0.5.2
+
+- **Wah is how much wah.** With Wah rate on, the hand now flutters from open to the Wah setting and
+  back, so Wah 100 is the full sweep and low settings a gentle one. In 0.5.1 it was the other way
+  round: the flutter filled what Wah left open, so Wah 1 swept the whole way and Wah 100 didn't move.
+- The fastest Wah rates (up to ~8 Hz) now sweep fully instead of being smoothed away.
+
 ## 0.5.1
 
 - **The wah is now heard.** Covering the sound hole (ENV → Body: Wah, the mod wheel, pressure, the Hole
