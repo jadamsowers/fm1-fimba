@@ -16,10 +16,11 @@ sound hole you can cover for the kalimba "wah" and buzzers like an mbira's. Behi
 granular cloud, a ping-pong delay, a plate reverb, tape and lo-fi colour, a chorus and a filter.
 Mbira-style patterns can play over the chords you choose.
 
-> **Status.** The firmware builds and passes its tests, and the browser version runs the same code,
-> but this firmware **has not yet been run on a real FM-1**. Installing is at your own risk. The
-> package is built so that the chip's own update mode can't be overwritten, and the firmware falls
-> back to a safe mode if it can't start; see [Installing safely](#installing-safely).
+> **Status: beta.** FiMba-1 runs on the FM-1. It's installed and playing on real hardware, put there
+> with the page's own web updater. Custom firmware is still installed at your own risk: the package
+> is built so that the chip's own update mode can't be overwritten, the firmware falls back to a safe
+> mode if it can't start, and the stock firmware can always go back on; see
+> [Installing safely](#installing-safely).
 
 ---
 
@@ -85,6 +86,9 @@ In rough order:
 - The JieLi toolchain's download server was blocked on the network where this was built. The build
   scripts now fall back to the same toolchain from a Docker image, and to a GitHub mirror of the
   SDK files, which are checked against known hashes.
+- GitHub Actions to test everything, build the firmware, publish releases and this site, and a firmware
+  updater in the web page.
+- The first install on a real FM-1, from the web page's updater: it boots and plays.
 
 ## Credits
 

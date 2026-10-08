@@ -1,9 +1,8 @@
 **FiMba-1**: a physically modelled kalimba (thumb piano) firmware for the M-VAVE FM-1.
 
-> ⚠️ **Beta: not yet run on a real FM-1.** It builds, and passes its tests in the simulator and the
-> browser, which run the same code. Its package differs from FoMni's (which installs and boots) only
-> in the app, checked byte by byte in this release's build. But the first boot on hardware is still
-> to come. Install at your own risk, and have the way back ready first (below).
+> **Beta.** FiMba-1 runs on the FM-1, installed with the web updater. Custom firmware is installed at
+> your own risk, so have the way back ready first (below). Its package differs from FoMni's only in
+> the app, checked byte by byte in this release's build.
 
 ### Files
 
