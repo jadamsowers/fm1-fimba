@@ -191,7 +191,7 @@ has and which one you're on.
 | **LFO**                           | Grain → Spread   | The granular cloud; its scatter, the echoes' feedback, the stereo width                                                                                                            |
 | **SEL**                           | Keys → Play      | The layout, scale, key, black keys; the chord roll and the octave                                                                                                                  |
 | **SEQ**                           | Pattern          | The mbira pattern's settings                                                                                                                                                       |
-| **GLO**                           | Setup            | Tuning, MIDI, the version                                                                                                                                                          |
+| **GLO**                           | Setup            | Tuning, MIDI, the theme; the version                                                                                                                                               |
 | **EDIT**                          |                  | Every page in turn                                                                                                                                                                 |
 | **ARP**                           |                  | **Tap:** the mbira pattern on and off (see [Patterns](#patterns)). Lit while it runs, dark on each beat. **Hold** (half a second): the Pattern page, without turning it on or off. |
 | **PLAY**                          |                  | Freeze the grain cloud (it keeps playing what's in its buffer); again to go live. Lit while frozen.                                                                                |
@@ -309,15 +309,18 @@ centre.
 
 **GLO → Setup**
 
-| Knob     | Range (default)   | What it does                    |
-| -------- | ----------------- | ------------------------------- |
-| Tune     | −50–+50 cents (0) | Fine tuning                     |
-| MIDI ch  | Omni, 1–16 (Omni) | The channel MIDI is received on |
-| MIDI out | Off, On (On)      | Send the keys as MIDI notes     |
+| Knob     | Range (default)     | What it does                                                                     |
+| -------- | ------------------- | -------------------------------------------------------------------------------- |
+| Tune     | −50–+50 cents (0)   | Fine tuning                                                                      |
+| MIDI ch  | Omni, 1–16 (Omni)   | The channel MIDI is received on                                                  |
+| MIDI out | Off, On (On)        | Send the keys as MIDI notes                                                      |
+| Theme    | Light, Dark (Light) | The screen's colours: pale wood and dark ink, or near-black with cream and amber |
 
-The Setup page's header shows the audio load (**CPU %**) and counts any dropouts, so you can check
-the firmware's load on the hardware. Where a fourth knob would be, it shows the firmware's
-**version** (DEV on a build that isn't a release).
+The Setup page's header shows the firmware's **version** (DEV on a build that isn't a release) and
+the audio load (**CPU %**), and counts any dropouts, so you can check the firmware's load on the
+hardware.
+
+![The Dark theme](docs/img/dark.png)
 
 ### The screen
 

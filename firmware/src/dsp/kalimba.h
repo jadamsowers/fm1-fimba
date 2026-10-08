@@ -45,6 +45,7 @@ enum {
     P_TAPE, P_LOFI, P_CHORUS, P_FILTER,              /* Color page */
     P_PATTERN, P_PTEMPO, P_GLIDE, P_TUNING,          /* Pattern page: Pattern, Tempo; Character page: Glide, Tuning */
     P_WORN,                                          /* Character page */
+    P_THEME,                                         /* Setup page: the screen's colours (the UI's) */
     P_NPARAMS
 };
 typedef struct {
@@ -60,6 +61,7 @@ enum { LAY_TINE, LAY_KEYBOARD, LAY_MIRROR, LAY_N };   /* Mirror: Tine right for 
 enum { BLK_CHORDS, BLK_SHARPS, BLK_PERFORM, BLK_N };
 enum { PAT_THUMBS, PAT_CASCADE, PAT_HEMIOLA, PAT_INTERLOCK, PAT_N };
 enum { TUNE_EQUAL, TUNE_JUST, TUNE_N };
+enum { THEME_LIGHT, THEME_DARK, THEME_N };
 enum { GP_DOWN12, GP_DOWN7, GP_UNISON, GP_UP7, GP_UP12, GP_UP19, GP_SHIMMER, GP_REVERSE, GP_N };
 #define KM_NSCALE 12
 extern const char *const KM_NOTE_NAME[12];

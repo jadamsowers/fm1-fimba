@@ -24,7 +24,7 @@ static const km_param_t PARAMS[P_NPARAMS] = {
     {"Octave", -2, 2, 0}, {"Transpose", -12, 12, 0},
     {"Tape", 0, 100, 0}, {"Lo-fi", 0, 100, 0}, {"Chorus", 0, 100, 0}, {"Filter", -100, 100, 0},
     {"Pattern", 0, PAT_N - 1, PAT_THUMBS}, {"Tempo", 40, 200, 96}, {"Glide", 0, 100, 30}, {"Tuning", 0, TUNE_N - 1, TUNE_EQUAL},
-    {"Worn", 0, 100, 0},
+    {"Worn", 0, 100, 0}, {"Theme", 0, THEME_N - 1, THEME_LIGHT},
 };
 const km_param_t *km_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -189,6 +189,7 @@ void km_param_text(int i, int v, char *b)
     static const char *const REL[2] = {"Ring", "Damp"};
     static const char *const PAT[PAT_N] = {"Thumbs", "Cascade", "3 over 2", "Interlock"};
     static const char *const TUN[TUNE_N] = {"Equal", "Just"};
+    static const char *const THM[THEME_N] = {"Light", "Dark"};
     switch (i) {
     case P_MATERIAL: copy_s(b, km_material(v)->name); return;
     case P_BODY: copy_s(b, BODY[(unsigned)v < BODY_N ? v : 0]); return;
@@ -200,6 +201,7 @@ void km_param_text(int i, int v, char *b)
     case P_RELEASE: copy_s(b, REL[v ? 1 : 0]); return;
     case P_PATTERN: copy_s(b, PAT[(unsigned)v < PAT_N ? v : 0]); return;
     case P_TUNING: copy_s(b, TUN[v ? 1 : 0]); return;
+    case P_THEME: copy_s(b, THM[v ? 1 : 0]); return;
     case P_FILTER:                                /* one knob: left a low-pass, right a high-pass */
         if (!v) {
             copy_s(b, "Off");

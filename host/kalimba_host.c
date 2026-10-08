@@ -24,7 +24,8 @@
  *                                (WHAT: view dirty frozen store_writes midi_out voices grains hole octshift
  *                                 dropped pat pool pulse ext parN whiteW (cents of white key W) keyK (cents of key K, Keyboard
  *                                 layout) tineC (level x100 of the tine at
- *                                 C cents) peak_db_max peak_db_min)
+ *                                 C cents) lumaY (brightness 0..255 of the screen at x 2, row Y: the theme)
+ *                                 peak_db_max peak_db_min)
  *   reboot                       re-run boot from the simulated flash (persistence test)
  *   oldproject                   put a format 1 project (Material 2) in the simulated flash
  */
@@ -397,6 +398,11 @@ static int expect(const char *what, const char *val)
         got = key_cents(atoi(what + 3));
     else if (!strncmp(what, "tine", 4))           /* tineC: the level x 100 of the tine at C cents */
         got = tine(atoi(what + 4));
+    else if (!strncmp(what, "luma", 4)) {         /* lumaY: the screen's brightness at (2, Y) */
+        uint16_t p = fb[(atoi(what + 4) % 240) * 240 + 2];
+        p = (uint16_t)((p >> 8) | (p << 8));
+        got = (int)((((p >> 11) & 31) * 255 / 31 * 3 + ((p >> 5) & 63) * 255 / 63 * 6 + (p & 31) * 255 / 31) / 10);
+    }
     else if (!strcmp(what, "peak_db_max") || !strcmp(what, "peak_db_min")) {
         double db = 20.0 * log10(peak_out > 1e-9f ? peak_out : 1e-9f);
         int bad = what[8] == 'm' && what[9] == 'a' ? db > atof(val) : db < atof(val);
