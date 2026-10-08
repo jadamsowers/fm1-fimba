@@ -172,23 +172,27 @@ same strength. **Hardness** sets how firm that pluck is. Over MIDI, velocity set
 
 ### Buttons
 
-| Button | What it does |
-|---|---|
-| **HOME** | The Tine page |
-| **ENV** | The Body page |
-| **FX** | The Space page |
-| **LFO** | The Grain page |
-| **SEL** | The Keys page |
-| **SEQ** | The More page |
-| **GLO** | The Setup page |
-| **EDIT** | The next page, including two that have no button of their own: **Color** and **Pattern** |
-| **PLAY** | Freeze the grain cloud (it keeps playing what's in its buffer); again to go live. Lit while frozen. |
-| **REC** | Palm mute: damps every tine at once |
-| **ARP** | The mbira pattern on and off (see [Patterns](#patterns)). Lit while it runs, dark on each beat. |
-| **OCT− / OCT+** | Octave down / up (−2 to +2) |
-| **SAVE** | Save now. Settings also save themselves about four seconds after a change, once everything is quiet. |
-| **OCT− + OCT+, held 5 s** | Update mode (to install firmware) |
-| **OCT− + OCT+, held at power-on** | Hardware calibration: the screen asks for each button and knob in turn |
+The seven page buttons each own one to three pages. Pressing a button shows its first page; pressing
+it again flips to its next page and round. Dots after the page's name in the header show how many it
+has and which one you're on.
+
+| Button | Pages | What it does |
+|---|---|---|
+| **HOME** | Tine → Character | The tine itself; its wear, pitch and ring |
+| **ENV** | Body | What the tines sit on |
+| **FX** | Space → Color | The reverb and the echoes; tape, lo-fi, chorus, filter |
+| **LFO** | Grain → Spread | The granular cloud; its scatter, the echoes' feedback, the stereo width |
+| **SEL** | Keys → Play | The layout, scale, key, black keys; the chord roll and the octave |
+| **SEQ** | Pattern | The mbira pattern's settings |
+| **GLO** | Setup | Tuning, MIDI |
+| **EDIT** | | Every page in turn |
+| **ARP** | | **Tap:** the mbira pattern on and off (see [Patterns](#patterns)). Lit while it runs, dark on each beat. **Hold** (half a second): the Pattern page, without turning it on or off. |
+| **PLAY** | | Freeze the grain cloud (it keeps playing what's in its buffer); again to go live. Lit while frozen. |
+| **REC** | | Palm mute: damps every tine at once |
+| **OCT− / OCT+** | | Octave down / up (−2 to +2) |
+| **SAVE** | | Save now. Settings also save themselves about four seconds after a change, once everything is quiet. |
+| **OCT− + OCT+, held 5 s** | | Update mode (to install firmware) |
+| **OCT− + OCT+, held at power-on** | | Hardware calibration: the screen asks for each button and knob in turn |
 
 ### Encoders and the MASTER knob
 
@@ -198,13 +202,13 @@ same strength. **Hardness** sets how firm that pluck is. Over MIDI, velocity set
 | **SELECT** | Material (Steel, Brass, Bronze, Aluminium, Bamboo, Glass) |
 | **ALGORITHM** | Scale |
 | **PRESETS** | Key in the Tine layout, Transpose in the Keyboard layout |
-| **KNOB 1–4** | The four values on the current page. Turning quickly moves in bigger steps. |
+| **KNOB 1–4** | The values on the current page. Turning quickly moves in bigger steps. |
 
 ### The pages and their knobs
 
-Each page puts four values on KNOB 1–4. The values are saved with your settings.
+Each page puts up to four values on KNOB 1–4. The values are saved with your settings.
 
-**HOME: Tine**, the tine itself
+**HOME → Tine**, the tine itself
 
 | Knob | Range (default) | What it does |
 |---|---|---|
@@ -213,7 +217,18 @@ Each page puts four values on KNOB 1–4. The values are saved with your setting
 | Decay | 0–100 (50) | How long the tines ring, from about a quarter to four times their natural sustain |
 | Tone | 0–100 (55) | How fast the upper overtones die away: low is dark and mellow, high keeps them ringing |
 
-**ENV: Body**, what the tines sit on
+**HOME → Character** (press HOME again), the instrument's wear, pitch and ring
+
+![The Character page](docs/img/character.png)
+
+| Knob | Range (default) | What it does |
+|---|---|---|
+| Worn | 0–100 (0) | An old, played-in kalimba. Each tine gets its own quirks, the same every time it's plucked: a little out of tune (up to ±12 cents at 100), a sustain longer or shorter than its neighbours', a faster or slower beat, and slightly uneven brightness and level. 0 is a perfect instrument. |
+| Glide | 0–100 (30) | The pluck going sharp: a hard pluck starts up to 40 cents sharp and settles in about 50 ms, as a real tine does when it swings wide. Strongest with high Hardness (or velocity over MIDI). |
+| Tuning | Equal, Just (Equal) | Just: pure 5-limit intervals over the key (Tine) or over the C key (Keyboard). The Mbira scale keeps its own tuning. |
+| Release | Ring, Damp (Ring) | Ring: a tine keeps ringing after you let go, as on a real kalimba. Damp: letting go puts a finger on it. |
+
+**ENV → Body**, what the tines sit on
 
 | Knob | Range (default) | What it does |
 |---|---|---|
@@ -222,7 +237,7 @@ Each page puts four values on KNOB 1–4. The values are saved with your setting
 | Wah | 0–100 (0) | How much of the sound hole a finger covers: the hole's resonance drops and darkens (Box and Gourd only) |
 | Wah rate | Hand, 1–100 (Hand) | Hand: the hole moves only with the Wah knob, the mod wheel, pressure or the Hole key. Above that, a hand fluttering over it, 0.1 to 8 Hz. |
 
-**FX: Space**
+**FX → Space**
 
 | Knob | Range (default) | What it does |
 |---|---|---|
@@ -231,48 +246,7 @@ Each page puts four values on KNOB 1–4. The values are saved with your setting
 | Delay | 0–100 (0) | The echoes' level |
 | Time | 40–740 ms (330) | The time between echoes, left and right in turn (ping-pong) |
 
-**LFO: Grain**, a granular cloud made from what you've just played
-
-| Knob | Range (default) | What it does |
-|---|---|---|
-| Grains | 0–100 (0) | The cloud's level |
-| Grain ms | 20–500 (140) | How long each grain lasts |
-| Density | 1–60 a second (14) | How many grains start each second |
-| Pitch | −12, −7, 0, +7, +12, +19, Shimmer, Reverse (+12) | The grains' pitch in semitones. Shimmer mixes unison, fifth and octave at random; Reverse plays them backwards. |
-
-**SEL: Keys**: Layout, Scale, Key, Black in the Tine layout; Layout, Transpose, Octave in Keyboard
-
-| Knob | Range (default) | What it does |
-|---|---|---|
-| Layout | Tine, Keyboard (Tine) | [Keys](#keys) |
-| Scale | Major, Minor, Penta, Penta m, Dorian, Mixolydian, Lydian, Harmonic minor, Hirajoshi, Blues, Mbira, Chromatic (Major) | The tines' scale (Tine layout). Mbira approximates a Shona *Nyamaropa* tuning, close to an equal seven-step octave with a near-pure fifth. |
-| Key | C–B (C) | The tonic (Tine layout) |
-| Black | Chords, Sharps, Perform (Chords) | What the black keys do (Tine layout) |
-| Transpose | −12–+12 (0) | Shifts the Keyboard layout in semitones |
-| Octave | −2–+2 (0) | The same as OCT−/OCT+ |
-
-**SEQ: More**
-
-| Knob | Range (default) | What it does |
-|---|---|---|
-| Feedback | 0–95 (45) | How many echoes: each is this fraction of the one before |
-| Spray | 0–100 (30) | How scattered the grains are in position, timing, pitch and pan |
-| Strum ms | 0–120 (30) | The time between the notes of a black-key chord roll |
-| Release | Ring, Damp (Ring) | Ring: a tine keeps ringing after you let go, as on a real kalimba. Damp: letting go puts a finger on it. |
-
-**GLO: Setup**
-
-| Knob | Range (default) | What it does |
-|---|---|---|
-| Tune | −50–+50 cents (0) | Fine tuning |
-| MIDI ch | Omni, 1–16 (Omni) | The channel MIDI is received on |
-| MIDI out | Off, On (On) | Send the keys as MIDI notes |
-| Width | 0–100 (70) | Stereo width: the tines' spread from left to right, and the grains' and echoes' |
-
-The Setup page's header shows the audio load (**CPU %**) and counts any dropouts, so you can check
-the firmware's load on the hardware.
-
-**EDIT → Color**: colour on the whole sound
+**FX → Color** (press FX again), colour on the whole sound
 
 | Knob | Range (default) | What it does |
 |---|---|---|
@@ -284,14 +258,58 @@ the firmware's load on the hardware.
 Every one of these fades in and out without a click, including turning the filter straight through
 centre.
 
-**EDIT → Pattern**
+**LFO → Grain**, a granular cloud made from what you've just played
+
+| Knob | Range (default) | What it does |
+|---|---|---|
+| Grains | 0–100 (0) | The cloud's level |
+| Grain ms | 20–500 (140) | How long each grain lasts |
+| Density | 1–60 a second (14) | How many grains start each second |
+| Pitch | −12, −7, 0, +7, +12, +19, Shimmer, Reverse (+12) | The grains' pitch in semitones. Shimmer mixes unison, fifth and octave at random; Reverse plays them backwards. |
+
+**LFO → Spread** (press LFO again)
+
+| Knob | Range (default) | What it does |
+|---|---|---|
+| Spray | 0–100 (30) | How scattered the grains are in position, timing, pitch and pan |
+| Feedback | 0–95 (45) | How many echoes: each is this fraction of the one before |
+| Width | 0–100 (70) | Stereo width: the tines' spread from left to right, and the grains' and echoes' |
+
+**SEL → Keys**: Layout, Scale, Key, Black in the Tine layout; Layout, Transpose, Octave in Keyboard
+
+| Knob | Range (default) | What it does |
+|---|---|---|
+| Layout | Tine, Keyboard (Tine) | [Keys](#keys) |
+| Scale | Major, Minor, Penta, Penta m, Dorian, Mixolydian, Lydian, Harmonic minor, Hirajoshi, Blues, Mbira, Chromatic (Major) | The tines' scale (Tine layout). Mbira approximates a Shona *Nyamaropa* tuning, close to an equal seven-step octave with a near-pure fifth. |
+| Key | C–B (C) | The tonic (Tine layout) |
+| Black | Chords, Sharps, Perform (Chords) | What the black keys do (Tine layout) |
+| Transpose | −12–+12 (0) | Shifts the Keyboard layout in semitones |
+| Octave | −2–+2 (0) | The same as OCT−/OCT+ |
+
+**SEL → Play** (press SEL again)
+
+| Knob | Range (default) | What it does |
+|---|---|---|
+| Strum ms | 0–120 (30) | The time between the notes of a black-key chord roll |
+| Octave | −2–+2 (0) | The same as OCT−/OCT+ |
+
+**SEQ → Pattern** (or hold ARP)
 
 | Knob | Range (default) | What it does |
 |---|---|---|
 | Pattern | Thumbs, Cascade, 3 over 2, Interlock (Thumbs) | Which mbira pattern ARP plays ([below](#patterns)) |
 | Tempo | 40–200 BPM (96) | The pattern's tempo, three pulses to a beat. MIDI clock takes over while it comes in. |
-| Glide | 0–100 (30) | How far a hard pluck starts sharp: up to 40 cents, settling in about 50 ms |
-| Tuning | Equal, Just (Equal) | Just: pure 5-limit intervals over the key (Tine) or over the C key (Keyboard). The Mbira scale keeps its own tuning. |
+
+**GLO → Setup**
+
+| Knob | Range (default) | What it does |
+|---|---|---|
+| Tune | −50–+50 cents (0) | Fine tuning |
+| MIDI ch | Omni, 1–16 (Omni) | The channel MIDI is received on |
+| MIDI out | Off, On (On) | Send the keys as MIDI notes |
+
+The Setup page's header shows the audio load (**CPU %**) and counts any dropouts, so you can check
+the firmware's load on the hardware.
 
 ### The screen
 
@@ -348,7 +366,7 @@ rings at one mode and decays at that mode's rate:
   different frequencies, and the two beat slowly against each other.
 - **Three upper modes**, which die away faster than the fundamental (Tone sets how much faster).
 
-Twelve tines can ring at once. A thirteenth note takes over the quietest, which fades out over 6 ms
+Sixteen tines can ring at once. A seventeenth note takes over the quietest, which fades out over 6 ms
 rather than being cut. A tine plucked again while it rings is the same vibrating bar: the thumb
 lands, damps it over a few milliseconds, and slips off into the new pluck.
 

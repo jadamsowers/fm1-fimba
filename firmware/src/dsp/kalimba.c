@@ -24,6 +24,7 @@ static const km_param_t PARAMS[P_NPARAMS] = {
     {"Octave", -2, 2, 0}, {"Transpose", -12, 12, 0},
     {"Tape", 0, 100, 0}, {"Lo-fi", 0, 100, 0}, {"Chorus", 0, 100, 0}, {"Filter", -100, 100, 0},
     {"Pattern", 0, PAT_N - 1, PAT_THUMBS}, {"Tempo", 40, 200, 96}, {"Glide", 0, 100, 30}, {"Tuning", 0, TUNE_N - 1, TUNE_EQUAL},
+    {"Worn", 0, 100, 0},
 };
 const km_param_t *km_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -311,9 +312,12 @@ typedef struct {
     int16_t cents;
     float fade, fade_step;                            /* a stolen voice, fading out (fade slots only) */
     float w0[KM_NMODE], rr[KM_NMODE], amp[KM_NMODE];  /* each mode at rest: frequency (rad), radius, level */
+    float c0[KM_NMODE], s0[KM_NMODE];                 /* cos and sin of w0: the glide moves from them */
+    float cw[KM_NMODE], sw[KM_NMODE];                 /* cos and sin of the frequency now (the silence test) */
     float glide, glide_pend, glide_rise;              /* cents sharp now (a hard pluck stretches the tine); to come,
                                                        * and how much more each chunk (a ringing tine eases into it) */
-    uint8_t on, nm, quiet, released, contact, rise_n;         /* contact: chunks left of a thumb on it (re-pluck) */
+    uint8_t on, nm, quiet, released, contact, rise_n;
+    uint8_t live;                                     /* the modes still sounding (bit k): the rest are skipped */         /* contact: chunks left of a thumb on it (re-pluck) */
 } voice_t;
 /* Two spare slots where a stolen voice fades out over a few milliseconds while its slot takes the new
  * tine: cutting it dead was a pop (as loud as the tine was) */
@@ -332,6 +336,20 @@ static float glide_max = 12.0f;
 
 static float cents_hz(int c) { return 8.17579892f * fm_exp2f((float)c * (1.0f / 1200.0f)) * tunefac * bendfac; }
 
+/* Worn: an old, played-in instrument. Each tine has its own quirks, the same each time it's plucked
+ * (they come from its pitch): a little out of tune (up to +-12 cents), a sustain longer or shorter than
+ * its neighbours', its two bending planes further apart or closer (a faster or slower beat), its upper
+ * modes brighter or duller, and a little louder or softer. */
+static float worn;                                    /* 0..1 */
+static float wear(int cents, int i)                   /* the tine's quirk i, -1..1 */
+{
+    uint32_t h = (uint32_t)cents * 2654435761u ^ (uint32_t)i * 0x9E3779B9u;
+    h ^= h >> 15;
+    h *= 0x2C1B3C6Du;
+    h ^= h >> 12;
+    return (float)(h & 0xFFFFu) * (2.0f / 65535.0f) - 1.0f;
+}
+
 /* the modes' coefficients for the voice's tine, its material, Decay and Tone (damp: the finger) */
 /* The resonators' settings, from their frequency (with the glide) and radius: b1 and g follow the
  * frequency, b2 the radius. A ringing mode simply carries on from its last two outputs, which is the
@@ -340,17 +358,27 @@ static float cents_hz(int c) { return 8.17579892f * fm_exp2f((float)c * (1.0f / 
  * glide settles. */
 static void voice_freq(voice_t *v)
 {
-    const float st = 1.0f + v->glide * 0.000577791f;   /* cents -> ratio (first order: the glide is small) */
+    const float e = v->glide * 0.000577791f;           /* cents -> the fraction the frequency rises */
     int k;
     for (k = 0; k < KM_NMODE; k++) {
-        float w = v->w0[k] * st, r = v->rr[k];
+        float w = v->w0[k] * (1.0f + e), r = v->rr[k], c, sn;
         if (k >= v->nm || v->amp[k] <= 0.0f || w > 0.45f * FM_TWO_PI) {
             v->b1[k] = v->b2[k] = v->g[k] = 0.0f;
             continue;
         }
-        v->b1[k] = 2.0f * r * fm_cosf(w);
+        if (e == 0.0f) {
+            c = v->c0[k];
+            sn = v->s0[k];
+        } else {   /* cos and sin of w0 + d from those of w0: the glide is small (d < 0.07 rad), to d^3 */
+            const float d = v->w0[k] * e, d2 = 0.5f * d * d, d3 = d * d2 * (1.0f / 3.0f);
+            c = v->c0[k] * (1.0f - d2) - v->s0[k] * (d - d3);
+            sn = v->s0[k] * (1.0f - d2) + v->c0[k] * (d - d3);
+        }
+        v->b1[k] = 2.0f * r * c;
         v->b2[k] = -r * r;
-        v->g[k] = v->amp[k] * fm_sinf(w);             /* an impulse of area 1 rings at amplitude amp */
+        v->g[k] = v->amp[k] * sn;                     /* an impulse of area 1 rings at amplitude amp */
+        v->cw[k] = c;
+        v->sw[k] = sn;
     }
 }
 
@@ -358,11 +386,24 @@ static void voice_coefs(voice_t *v)
 {
     const km_material_t *m = km_material(par[P_MATERIAL]);
     float f0 = cents_hz(v->cents), dscale = fm_exp2f((float)(par[P_DECAY] - 50) * 0.04f),
-          tonefac = fm_exp2f((float)(50 - par[P_TONE]) * 0.04f),
-          t1 = m->t60 * dscale * fm_powf(f0 * (1.0f / 261.63f), -m->pitch_k);
+          tonefac = fm_exp2f((float)(50 - par[P_TONE]) * 0.04f), t1, lvl = 1.0f, upper = 1.0f, spread = 1.0f;
     int k, nm = 0;
+    if (worn > 0.0f) {                                  /* this tine's quirks */
+        f0 *= fm_exp2f(worn * 12.0f * wear(v->cents, 0) * (1.0f / 1200.0f));
+        dscale *= 1.0f + 0.35f * worn * wear(v->cents, 1);
+        spread = 1.0f + 1.5f * worn * wear(v->cents, 2);
+        upper = 1.0f + 0.5f * worn * wear(v->cents, 3);
+        lvl = 1.0f + 0.2f * worn * wear(v->cents, 4);
+    }
+    t1 = m->t60 * dscale * fm_powf(f0 * (1.0f / 261.63f), -m->pitch_k);
     for (k = 0; k < KM_NMODE; k++) {
-        float ratio = k ? m->ratio[k - 1] : 1.0f, amp = k ? m->amp[k - 1] : 1.0f, f = f0 * ratio, t60, r;
+        float ratio = k ? m->ratio[k - 1] : 1.0f, amp = k ? m->amp[k - 1] : 1.0f, f, t60, r;
+        if (k == 1)                                     /* the twin: its beat */
+            ratio = 1.0f + (ratio - 1.0f) * spread;
+        if (k >= 2)
+            amp *= upper;
+        amp *= lvl;
+        f = f0 * ratio;
         if (k == 1 && m->beat_amp <= 0.0f)
             amp = 0.0f;
         v->amp[k] = 0.0f;
@@ -373,6 +414,8 @@ static void voice_coefs(voice_t *v)
             t60 = 0.01f;
         r = fm_expf(-6.9077553f / (t60 * KM_SR)) * v->damp;
         v->w0[k] = FM_TWO_PI * f / KM_SR;
+        v->c0[k] = fm_cosf(v->w0[k]);
+        v->s0[k] = fm_sinf(v->w0[k]);
         v->rr[k] = r;
         v->amp[k] = amp;
         nm = k + 1;
@@ -443,6 +486,7 @@ static void pluck(int cents, int vel, int pan)
         for (k = 0; k < KM_NMODE; k++)
             v->y1[k] = v->y2[k] = 0.0f;
     v->cents = (int16_t)cents;
+    v->live = 0xFFu;                                    /* every mode, until it falls silent */
     v->damp = again ? CONTACT_D : 1.0f;                 /* ringing: the thumb lands on it first */
     v->contact = again ? (uint8_t)CONTACT_N : 0u;
     v->released = 0;
@@ -1128,6 +1172,10 @@ static void apply(int p, int v)
     case P_CHORUS: ch_t = (float)v * 0.01f; break;
     case P_FILTER: flt_t = (float)v * 0.01f; break;
     case P_GLIDE: glide_max = (float)v * 0.4f; break;
+    case P_WORN:
+        worn = (float)v * 0.01f;
+        retune_all();                                   /* the ringing tines take their quirks at once */
+        break;
     default: break;
     }
 }
@@ -1351,7 +1399,7 @@ static void render_voices(uint32_t n)
         for (k = 0; k < v->nm; k++) {
             float y1 = v->y1[k], y2 = v->y2[k];
             const float b1 = v->b1[k], b2 = v->b2[k], g = v->g[k];
-            if (g == 0.0f)
+            if (g == 0.0f || !(v->live >> k & 1u))
                 continue;
             if (excite) {
                 for (j = 0; j < n; j++) {
@@ -1370,6 +1418,14 @@ static void render_voices(uint32_t n)
             }
             v->y1[k] = fm_flush(y1);
             v->y2[k] = fm_flush(y2);
+            if (!excite) {   /* below ~-110 dB it is silence: skip it until the next pluck. Its amplitude C from
+                              * the last two outputs: (C sin w)^2 = (y1 sin w)^2 + (y1 cos w - r y2)^2 */
+                const float s = v->sw[k], q = y1 * v->cw[k] - v->rr[k] * y2;
+                if (y1 * y1 * s * s + q * q < 1e-11f * s * s) {
+                    v->live &= (uint8_t)~(1u << k);
+                    v->y1[k] = v->y2[k] = 0.0f;
+                }
+            }
         }
         if (v->click > 1e-6f && v->ex_ph >= 0.0f) {     /* the nail's tick, as it slips off */
             float c = v->click;

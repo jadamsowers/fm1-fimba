@@ -21,8 +21,10 @@ expect tine6700 >5
 expect tine7100 >5
 expect tine7400 >5
 key b4 up
-# Release Damp (More page, KNOB 4): letting go of a chord key damps its roll
-tap SEQ
+# Release Damp (HOME's second page, Character, KNOB 4): letting go of a chord key damps its roll
+tap GLO
+tap HOME
+tap HOME
 spin K4 1
 expect par23 1
 key b1 down

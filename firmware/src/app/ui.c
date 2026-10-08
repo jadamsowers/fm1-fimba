@@ -8,32 +8,38 @@
  *                  six materials)
  *   Layout Keyboard every key, white and black, plays its printed note (F3 on the lowest), shifted
  *                  by Transpose (and the octave): a chromatic kalimba with a tine per key
- *   PLAY freeze the grains     REC palm mute (every tine)     ARP the mbira pattern on / off: over
- *                  the chord a chord key picks (Tine, Chords), or the keys held (Keyboard), or MIDI's
+ *   PLAY freeze the grains     REC palm mute (every tine)     ARP tap: the mbira pattern on / off, over
+ *                  the chord a chord key picks (Tine, Chords), or the keys held (Keyboard), or MIDI's;
+ *                  held: the Pattern page
  *   OCT- / OCT+    the octave
- *   HOME ENV FX LFO SEL SEQ GLO   the pages: Tine, Body, Space, Grain, Keys, More, Setup; EDIT steps
- *                  through them and two more: Color (tape, lo-fi, chorus, filter) and Pattern
+ *   HOME ENV FX LFO SEL SEQ GLO   the pages (pressed again: the button's next page): HOME Tine,
+ *                  Character; ENV Body; FX Space, Color; LFO Grain, Spread; SEL Keys, Play; SEQ Pattern;
+ *                  GLO Setup. EDIT steps through them all.
  *   SELECT material   ALGORITHM scale   PRESETS key (Tine) / transpose (Keyboard)   KNOB 1-4 the page's values
  *   SAVE           saves (it also saves by itself, a few seconds after a change, when quiet) */
 
-enum { V_TINE, V_BODY, V_SPACE, V_GRAIN, V_KEYS, V_MORE, V_SETUP, V_COLOR, V_PATTERN, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Tine", "Body", "Space", "Grain", "Keys", "More", "Setup", "Color",
-                                              "Pattern"};
-/* the page each button shows (Color and Pattern have none: EDIT reaches them) */
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_FX, B_LFO, B_SEL, B_SEQ, B_GLO, NB, NB};
+/* The pages, by the button that shows them: a button with more than one page flips to its next page
+ * when pressed again (the header's dots show which); EDIT steps through all of them in this order */
+enum { V_TINE, V_CHARACTER, V_BODY, V_SPACE, V_COLOR, V_GRAIN, V_SPREAD, V_KEYS, V_PLAY, V_PATTERN, V_SETUP, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Tine", "Character", "Body", "Space", "Color", "Grain", "Spread",
+                                              "Keys", "Play", "Pattern", "Setup"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_HOME, B_ENV, B_FX, B_FX, B_LFO, B_LFO, B_SEL, B_SEL, B_SEQ, B_GLO};
+#define K_NONE 255                     /* a knob with nothing on it */
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_MATERIAL, P_HARD, P_DECAY, P_TONE},
+    {P_WORN, P_GLIDE, P_TUNING, P_RELEASE},          /* the instrument's character: its wear, its pitch, its ring */
     {P_BODY, P_BUZZ, P_WAH, P_WAHRATE},
     {P_REVERB, P_SIZE, P_DELAY, P_TIME},
-    {P_GRAIN, P_GSIZE, P_GDENS, P_GPITCH},
-    {P_LAYOUT, P_SCALE, P_KEY, P_BLACK},
-    {P_FEEDBACK, P_GSPRAY, P_STRUM, P_RELEASE},
-    {P_TUNE, P_MIDICH, P_MIDIOUT, P_WIDTH},
     {P_TAPE, P_LOFI, P_CHORUS, P_FILTER},
-    {P_PATTERN, P_PTEMPO, P_GLIDE, P_TUNING},
+    {P_GRAIN, P_GSIZE, P_GDENS, P_GPITCH},
+    {P_GSPRAY, P_FEEDBACK, P_WIDTH, K_NONE},
+    {P_LAYOUT, P_SCALE, P_KEY, P_BLACK},
+    {P_STRUM, P_OCTAVE, K_NONE, K_NONE},
+    {P_PATTERN, P_PTEMPO, K_NONE, K_NONE},
+    {P_TUNE, P_MIDICH, P_MIDIOUT, K_NONE},
 };
+#define ARP_HOLD_MS 500u               /* ARP held this long: the Pattern page (a tap: the pattern on / off) */
 
-#define K_NONE 255                     /* a knob with nothing on it */
 /* the Keys page follows the layout: Keyboard has no scale, key or black-key mode, but a transpose */
 static const uint8_t KEYS_KEYBOARD[4] = {P_LAYOUT, P_TRANSPOSE, P_OCTAVE, K_NONE};
 
@@ -84,6 +90,7 @@ static struct {
     int16_t kpool[KM_NPOOL];           /* the chord held keys / MIDI notes are building */
     uint8_t midi_held;                 /* MIDI notes held (a new chord starts when they are all up) */
     uint8_t pool_fresh;                /* this scan's keys start a new chord (none were held before it) */
+    uint32_t arp_t;                    /* when ARP went down (held: the Pattern page) */
     uint8_t frozen;
     int16_t key_cents[NKEYS][4];       /* what each key plucked (to damp it, and its MIDI note off) */
     uint8_t key_n[NKEYS];
@@ -367,6 +374,14 @@ static void set_view(int v)
 static void button(int b)
 {
     int v;
+    if (VIEW_BTN[ui.view] == b) {                   /* pressed again: its next page, or round to its first */
+        v = ui.view + 1;
+        if (v >= NVIEWS || VIEW_BTN[v] != b)
+            for (v = ui.view; v > 0 && VIEW_BTN[v - 1] == b; v--)
+                ;
+        set_view(v);
+        return;
+    }
     for (v = 0; v < NVIEWS; v++)
         if (VIEW_BTN[v] == b) {
             set_view(v);
@@ -482,11 +497,17 @@ static void input(void)
             continue;
         if (btn & m) {
             ui.btn_used &= ~m;
+            if (i == B_ARP)
+                ui.arp_t = plat_ms();
             if (i == B_PLAY || i == B_REC)             /* the playing buttons act on the press */
                 button((int)i);
         } else if (!(ui.btn_used & m) && i != B_PLAY && i != B_REC) {
             button((int)i);
         }
+    }
+    if ((btn >> B_ARP & 1u) && !(ui.btn_used >> B_ARP & 1u) && plat_ms() - ui.arp_t >= ARP_HOLD_MS) {
+        set_view(V_PATTERN);                         /* ARP held: the pattern's settings (no toggle on release) */
+        ui.btn_used |= 1u << B_ARP;
     }
     ch = keys ^ ui.keys;
     ui.pool_fresh = !ui.keys;                    /* (several keys down in one scan: one new chord) */
@@ -631,6 +652,18 @@ static void draw_header(void)
             cv_text(x, 6, &FONT_S, t, K_TEXT);
         }
         x = 18 + text_w(&FONT_B, VIEW_NAME[ui.view]);
+        {   /* the button's pages, when it has more than one: a dot each, this one filled */
+            int first = ui.view, n = 0, v;
+            while (first > 0 && VIEW_BTN[first - 1] == VIEW_BTN[ui.view])
+                first--;
+            for (v = first; v < NVIEWS && VIEW_BTN[v] == VIEW_BTN[ui.view]; v++)
+                n++;
+            if (n > 1) {
+                for (v = 0; v < n; v++)
+                    cv_round(x - 4 + v * 9, 12, 6, 6, 3, first + v == ui.view ? K_TEXT : K_LINE);
+                x += n * 9 + 2;
+            }
+        }
         if (ui.frozen) {
             w = text_w(&FONT_XS, "FRZ") + 10;
             cv_round(x, 6, w, 16, 6, K_BLUE_T);

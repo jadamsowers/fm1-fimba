@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 #define KM_SR 44100.0f
-#define KM_NVOICE 12                   /* tines sounding at once */
+#define KM_NVOICE 16                   /* tines sounding at once (12 measured 48% at worst on the FM-1) */
 #define KM_NMODE 5                     /* resonators per tine: the first mode, its twin, three more */
 #define KM_NWHITE 16                   /* the white keys: one tine each */
 #define KM_NBLACK 11
@@ -43,7 +43,8 @@ enum {
     P_OCTAVE,                                        /* OCT- / OCT+ */
     P_TRANSPOSE,                                     /* the Keyboard layout's transpose (Keys page) */
     P_TAPE, P_LOFI, P_CHORUS, P_FILTER,              /* Color page */
-    P_PATTERN, P_PTEMPO, P_GLIDE, P_TUNING,          /* Pattern page */
+    P_PATTERN, P_PTEMPO, P_GLIDE, P_TUNING,          /* Pattern page: Pattern, Tempo; Character page: Glide, Tuning */
+    P_WORN,                                          /* Character page */
     P_NPARAMS
 };
 typedef struct {

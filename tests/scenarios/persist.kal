@@ -1,4 +1,5 @@
 # the project survives a restart: SAVE, then autosave after a quiet moment
+tap GLO
 tap HOME
 spin K1 3
 expect par0 3
@@ -54,3 +55,4 @@ expect par0 2
 expect par36 30
 expect par35 96
 expect par30 0
+expect par38 0

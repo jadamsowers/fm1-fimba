@@ -5,8 +5,11 @@ spin K3 60
 expect par10 60
 spin K4 -130
 expect par11 200
-tap SEQ
-spin K1 20
+# Feedback: LFO's second page, Spread
+tap LFO
+tap LFO
+expect view 6
+spin K2 20
 expect par20 65
 tapkey w7
 wait 1500

@@ -23,10 +23,8 @@ expect pool 4
 wait 50
 leds
 # EDIT to the Pattern page: Pattern, Tempo, Glide, Tuning
-tap GLO
-tap EDIT
-tap EDIT
-expect view 8
+tap SEQ
+expect view 9
 spin K1 3
 expect par34 3
 spin K2 40
@@ -44,11 +42,15 @@ expect pat 0
 tap ARP
 midi FA 00 00
 midi F8 00 00
-wait 5
+wait 20
 expect ext 1
 tap ARP
-# just intonation: E over C is 386 cents up, not 400
-spin K4 1
+# just intonation (HOME's second page, Character): E over C is 386 cents up, not 400
+tap GLO
+tap HOME
+tap HOME
+expect view 1
+spin K3 1
 expect par37 1
 tap SEL
 spin K4 1
@@ -59,9 +61,9 @@ tapkey w6
 wait 30
 expect tine6386 >5
 tap GLO
-tap EDIT
-tap EDIT
-spin K4 -1
+tap HOME
+tap HOME
+spin K3 -1
 expect par37 0
 expect white6 6400
 # the Keyboard layout with the pattern: the keys held are its chord
@@ -88,8 +90,9 @@ key w4 up
 tap ARP
 # the Color page: tape, lo-fi, chorus, filter
 tap GLO
-tap EDIT
-expect view 7
+tap FX
+tap FX
+expect view 4
 spin K1 60
 spin K2 40
 spin K3 50

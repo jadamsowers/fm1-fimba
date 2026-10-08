@@ -11,8 +11,11 @@
 #define OM_VERSION "DEV"
 #endif
 #define PROJ_MAGIC 0x41424C4Bu           /* "KLBA": never a FoMni project */
-#define PROJ_FORMAT 2u                    /* 2: Color and Pattern (format 1 loads: those take defaults) */
-#define PROJ_FORMAT1_NPAR (P_TRANSPOSE + 1)     /* the values a format 1 project holds */
+/* The format counts the settings a project holds: a newer version reads an older project's values and
+ * gives the settings it lacks their defaults (its spare bytes, zeros, are never taken for settings).
+ * Add a setting at the end of P_*, bump the format, and add its count here. */
+#define PROJ_FORMAT 3u                    /* 3: Worn; 2: Color and Pattern; 1: the first */
+#define PROJ_NPAR_OF(f) ((f) == 1u ? P_TRANSPOSE + 1 : (f) == 2u ? P_TUNING + 1 : P_NPARAMS)
 
 typedef struct {
     uint32_t magic, format;

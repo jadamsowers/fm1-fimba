@@ -590,6 +590,48 @@ static void test_glide_just(void)
         CHECK(fm_fabsf((float)(km_just_cents(6000 + 100 * i, 6000) - 6000 - 100 * i)) < 20.0f, "just within 20 cents %d", i);
 }
 
+/* Worn: each tine its own quirks, the same every time; none at 0 */
+static float worn_pitch(int worn, int cents)
+{
+    fresh();
+    km_set(P_MATERIAL, MAT_BAMBOO);                  /* one clean mode, no twin */
+    km_set(P_GLIDE, 0);
+    km_set(P_WORN, worn);
+    km_pluck(cents, 100, 0, 0);
+    render(0, 16384);
+    return cents_off(find_pitch(2048, 8192, 8.17579892f * fm_exp2f((float)cents / 1200.0f)),
+                     8.17579892f * fm_exp2f((float)cents / 1200.0f));
+}
+
+static void test_worn(void)
+{
+    static const int T[6] = {6000, 6200, 6400, 6700, 6900, 7200};
+    float off[6], lo = 99.0f, hi = -99.0f, e1, e2;
+    int i;
+    for (i = 0; i < 6; i++) {
+        CHECK(fm_fabsf(worn_pitch(0, T[i])) < 1.0f, "Worn 0: tine %d in tune", T[i]);
+        off[i] = worn_pitch(100, T[i]);
+        lo = fm_minf(lo, off[i]);
+        hi = fm_maxf(hi, off[i]);
+        CHECK(fm_fabsf(off[i]) < 13.0f, "Worn 100: tine %d within 12 cents (%.1f)", T[i], (double)off[i]);
+    }
+    CHECK(hi - lo > 4.0f, "Worn 100: the tines differ (%.1f .. %.1f cents)", (double)lo, (double)hi);
+    CHECK(fm_fabsf(worn_pitch(100, T[2]) - off[2]) < 0.3f, "Worn: the same tine, the same quirk");
+    /* the sustains differ too: two tines' ring a second on, against the clean instrument's */
+    fresh();
+    km_set(P_WORN, 0);
+    km_pluck(6000, 100, 0, 0);
+    render(0, 44100 * 2);
+    e1 = rms(bufl, 44100, 8820);
+    fresh();
+    km_set(P_WORN, 100);
+    km_pluck(6000, 100, 0, 0);
+    render(0, 44100 * 2);
+    e2 = rms(bufl, 44100, 8820);
+    CHECK(fm_fabsf(20.0f * fm_log2f(e2 / e1) * 0.30103f) > 0.3f, "Worn: a tine's sustain changes (%.2f dB)",
+          (double)(20.0f * fm_log2f(e2 / e1) * 0.30103f));
+}
+
 /* the effects on one ringing tine: what each does, that none clicks as it comes in or goes */
 static void test_color(void)
 {
@@ -821,6 +863,7 @@ int main(int argc, char **argv)
     test_bodies();
     test_no_pops();
     test_glide_just();
+    test_worn();
     test_color();
     test_pattern();
     test_long_run();

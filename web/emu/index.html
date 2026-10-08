@@ -138,19 +138,20 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
     <ul>
       <li><b>Layout</b> (Keys page): <b>Tine</b>, the default, puts the tines on the white keys as on a real kalimba, lowest note (C4) in the middle and the scale alternating outward. <b>Keyboard</b> makes every key, white and black, play its printed note from F3 up, with <b>Transpose</b> on the Keys page (or PRESETS).</li>
       <li><b>Black keys</b> in the Tine layout follow the Keys page's <b>Black</b> setting: <b>Chords</b> (a thumb roll: C Dm Em F G Am Bdim, then CM7 FM7 G7 Am7), <b>Sharps</b> (the white key to the left, a semitone up) or <b>Perform</b> (mute, cover the hole, freeze, octave down / up while held, six materials).</li>
-      <li><b>PLAY</b> freezes the grain cloud. <b>REC</b> mutes every tine. <b>ARP</b> starts and stops the mbira pattern over the chord you pick (a chord key, held keys in Keyboard, or held MIDI notes).</li>
+      <li><b>PLAY</b> freezes the grain cloud. <b>REC</b> mutes every tine. <b>ARP</b>, tapped, starts and stops the mbira pattern over the chord you pick (a chord key, held keys in Keyboard, or held MIDI notes); held, it opens the pattern's settings.</li>
       <li><b>OCT−</b> / <b>OCT+</b>: octave. <b>SELECT</b> material, <b>ALGORITHM</b> scale, <b>PRESETS</b> key.</li>
     </ul>
   </div>
   <div>
     <h2>Pages</h2>
     <ul>
-      <li><b>HOME</b> Tine: material, hardness, decay, tone.</li>
+      <li>Press a page button again for its next page (the dots by the page's name show which).</li>
+      <li><b>HOME</b> Tine: material, hardness, decay, tone → Character: worn, glide, tuning, release.</li>
       <li><b>ENV</b> Body: box, gourd or board, buzzers, wah, wah rate.</li>
-      <li><b>FX</b> Space: reverb, size, delay, time. <b>LFO</b> Grain: level, size, density, pitch.</li>
-      <li><b>SEL</b> Keys: layout, then scale, key and black-key mode (Tine) or transpose and octave (Keyboard). <b>SEQ</b> More: feedback, spray, strum, release.</li>
-      <li><b>GLO</b> Setup: tune, MIDI channel, MIDI out, width.</li>
-      <li><b>EDIT</b> steps through them all and on to <b>Color</b> (tape, lo-fi, chorus, filter) and <b>Pattern</b> (pattern, tempo, glide, tuning).</li>
+      <li><b>FX</b> Space: reverb, size, delay, time → Color: tape, lo-fi, chorus, filter.</li>
+      <li><b>LFO</b> Grain: level, size, density, pitch → Spread: spray, feedback, width.</li>
+      <li><b>SEL</b> Keys: layout, then scale, key and black-key mode (Tine) or transpose and octave (Keyboard) → Play: strum, octave.</li>
+      <li><b>SEQ</b> Pattern: pattern, tempo (or hold <b>ARP</b>). <b>GLO</b> Setup: tune, MIDI channel, MIDI out. <b>EDIT</b> steps through every page.</li>
     </ul>
   </div>
   <div>
@@ -269,9 +270,10 @@ function hit(c, cls) {
   c.hit = d;
 }
 // what each control does, on hover (the Buttons list below says the same)
-const TIP = { FX: "Space page: reverb and delay", SEL: "Keys page: layout, scale, key, black keys", ENV: "Body page: body, buzz, wah",
-  LFO: "Grain page", EDIT: "Next page", GLO: "Setup page", HOME: "Tine page: material and pluck", SAVE: "Save",
-  ARP: "Mbira pattern on / off", SEQ: "More page: feedback, spray, strum, release", PLAY: "Freeze the grains", REC: "Palm mute: damp every tine",
+const TIP = { FX: "Space, then Color: reverb, delay; tape, lo-fi, chorus, filter", SEL: "Keys, then Play: layout, scale, key, black keys; strum",
+  ENV: "Body page: body, buzz, wah", LFO: "Grain, then Spread: the grain cloud; spray, feedback, width", EDIT: "Every page in turn",
+  GLO: "Setup page", HOME: "Tine, then Character: material and pluck; worn, glide, tuning, release", SAVE: "Save",
+  ARP: "Tap: mbira pattern on / off. Hold: its settings", SEQ: "Pattern page: pattern, tempo", PLAY: "Freeze the grains", REC: "Palm mute: damp every tine",
   "OCT-": "Octave down", "OCT+": "Octave up", SELECT: "Material", ALGORITHM: "Scale", PRESETS: "Key (Tine) or transpose (Keyboard)",
   MASTER: "Volume" };
 for (const [n, c] of [...Object.entries(buttons), ...Object.entries(knobs)]) if (TIP[n]) c.g.setAttribute("aria-description", TIP[n]);

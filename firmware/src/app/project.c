@@ -18,13 +18,11 @@ void project_defaults(void)
 static int project_valid(int bytes)
 {
     int i, have = (bytes - 8) / 2;               /* the values the saved project holds */
-    if (proj.magic != PROJ_MAGIC || (proj.format != PROJ_FORMAT && proj.format != 1u))
+    if (proj.magic != PROJ_MAGIC || proj.format < 1u || proj.format > PROJ_FORMAT)
         return 0;
-    if (proj.format == 1u) {                     /* its spare bytes (zeros) are not settings */
-        if (have > PROJ_FORMAT1_NPAR)
-            have = PROJ_FORMAT1_NPAR;
-        proj.format = PROJ_FORMAT;
-    }
+    if (have > PROJ_NPAR_OF(proj.format))        /* (its spare bytes, zeros, are not settings) */
+        have = PROJ_NPAR_OF(proj.format);
+    proj.format = PROJ_FORMAT;
     for (i = 0; i < P_NPARAMS; i++) {
         const km_param_t *p = km_param_info(i);
         if (i >= have || proj.par[i] < p->lo || proj.par[i] > p->hi)

@@ -541,9 +541,9 @@ int main(int argc, char **argv)
         else if (!strcmp(cmd, "oldproject")) {   /* a format 1 project in the store, as 0.1 saved it */
             project_defaults();
             proj.format = 1u;
-            memset(proj.par + PROJ_FORMAT1_NPAR, 0, sizeof proj.par - PROJ_FORMAT1_NPAR * sizeof proj.par[0]);
+            memset(proj.par + PROJ_NPAR_OF(1u), 0, sizeof proj.par - PROJ_NPAR_OF(1u) * sizeof proj.par[0]);
             proj.par[P_MATERIAL] = 2;
-            plat_store_save(OBJ_PROJ, &proj, 8u + 2u * PROJ_FORMAT1_NPAR + 32u);
+            plat_store_save(OBJ_PROJ, &proj, 8u + 2u * PROJ_NPAR_OF(1u) + 32u);
         } else if (!strcmp(cmd, "reboot")) {
             memset(&proj, 0, sizeof proj);
             boot();
