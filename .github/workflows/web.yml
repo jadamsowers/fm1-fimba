@@ -134,7 +134,10 @@ jobs:
     needs: [web, release]
     runs-on: ubuntu-latest
     # one publish at a time, whole: a main push and a tag pushed together once raced, the main run
-    # choosing its firmware before the tag's release existed and publishing after it
+    # choosing its firmware before the tag's release existed and publishing after it.
+    # Pages keeps the first deployment of a commit and quietly ignores later ones (deploy-pages names
+    # a deployment by its commit), so a commit both on main and tagged is published by the tag's run
+    # alone: tag a release soon after merging it, before main's run gets here
     concurrency:
       group: pages-publish
       cancel-in-progress: false
@@ -148,12 +151,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: A tagged commit on main is left to its tag's run
+        id: tagged
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # a lightweight tag lists the commit, an annotated one its peeled "^{}" line
+          if git ls-remote --tags origin 'v*' | grep -q "^$GITHUB_SHA"; then
+            echo "$GITHUB_SHA is tagged: its tag's run publishes it"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/download-artifact@v8
+        if: steps.tagged.outputs.skip != 'true'
         with:
           name: site
           path: site
 
       - name: The latest release's firmware, for the installer
+        if: steps.tagged.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -177,11 +192,13 @@ jobs:
           PY
 
       - uses: actions/upload-pages-artifact@v5
+        if: steps.tagged.outputs.skip != 'true'
         with:
           path: site
 
       - name: Deploy
         id: deployment
+        if: steps.tagged.outputs.skip != 'true'
         uses: actions/deploy-pages@v5
 
   release:
