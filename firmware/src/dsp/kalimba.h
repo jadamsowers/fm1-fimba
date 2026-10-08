@@ -57,6 +57,7 @@ void km_param_text(int i, int v, char *buf);   /* the value as the screen shows 
 
 enum { MAT_STEEL, MAT_BRASS, MAT_BRONZE, MAT_ALU, MAT_BAMBOO, MAT_GLASS, MAT_N };
 enum { BODY_NONE, BODY_BOARD, BODY_BOX, BODY_GOURD, BODY_N };
+int km_body_hole(int body);                    /* 1: it has a sound hole (Box, Gourd): the wah works */
 enum { LAY_TINE, LAY_KEYBOARD, LAY_MIRROR, LAY_N };   /* Mirror: Tine right for left (last: saves keep their values) */
 enum { BLK_CHORDS, BLK_SHARPS, BLK_PERFORM, BLK_N };
 enum { PAT_THUMBS, PAT_CASCADE, PAT_HEMIOLA, PAT_INTERLOCK, PAT_N };

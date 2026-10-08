@@ -4,6 +4,18 @@ A release is a push to `main` that changes `VERSION` to a version with no tag ye
 release build, tags the commit `vX.Y.Z` and publishes the GitHub Release with that version's notes,
 taken from its section below. Add the section in the same pull request as the `VERSION` change.
 
+## 0.6.0
+
+- **Reset to the defaults:** hold SAVE for 1.5 s, then press SAVE again to confirm (anything else, or
+  waiting 5 s, keeps everything). Every sound setting goes back to its default; the Setup page (Tune,
+  MIDI, Theme) stays as it is.
+- **MIDI out is off by default.** Turn it on on the Setup page (GLO, KNOB 3). Settings you've already
+  saved keep what they had.
+- **Wah needs a sound hole:** on the Board and None bodies, Wah and Wah rate are greyed out and don't
+  turn ("NO HOLE: BOX OR GOURD").
+- **The middle of the kalimba glows:** the key under the lowest tine (white key 9 in Tine, 8 in
+  Mirror; in Keyboard, the key that plays middle C) is dimly lit, and lights fully while it rings.
+
 ## 0.5.2
 
 - **Wah is how much wah.** With Wah rate on, the hand now flutters from open to the Wah setting and

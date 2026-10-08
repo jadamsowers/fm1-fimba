@@ -1,0 +1,88 @@
+# the defaults and getting back to them: MIDI out off; the wah only on a body with a sound hole; the
+# middle of the kalimba marked by a dim LED; SAVE held: reset to the defaults (asked first)
+# (params: 1 Hardness 4 Body 6 Wah 7 Wah rate 16 Layout 26 MIDI out 39 Theme; keys: 0 F3 .. 26 G5)
+expect par26 0
+# the middle of the kalimba, dim: Tine, the lowest tine's key (white 9, key 14); lit while it rings
+wait 50
+expect dimkey 14
+tapkey w8
+wait 30
+expect dimkey -1
+tap REC
+wait 400
+expect dimkey 14
+# Mirror: white 8 (key 12)
+tap SEL
+spin K1 2
+expect par16 2
+wait 30
+expect dimkey 12
+# Keyboard: the key that plays middle C (key 7, C4 as printed)
+spin K1 -1
+expect par16 1
+wait 30
+expect dimkey 7
+spin K1 -1
+expect par16 0
+wait 30
+leds
+# the wah: the Box has a hole
+tap ENV
+spin K3 50
+expect par6 50
+# Board has none: Wah and Wah rate don't turn
+spin K1 -1
+expect par4 1
+spin K3 10
+expect par6 50
+spin K4 10
+expect par7 0
+wait 50
+shot wah_off.png
+# back on the Box they do
+spin K1 1
+expect par4 2
+spin K3 10
+expect par6 60
+# reset: change a sound and the Setup page
+tap HOME
+spin K2 20
+expect par1 65
+tap GLO
+spin K4 1
+spin K3 1
+expect par39 1
+expect par26 1
+# SAVE held: asked, nothing saved, nothing reset yet
+press SAVE
+wait 1700
+release SAVE
+wait 50
+expect dirty 1
+expect par1 65
+shot reset_ask.png
+# any other button: kept
+tap HOME
+expect par1 65
+# asked again, and SAVE: the sounds back to their defaults, the Setup page as it was
+press SAVE
+wait 1700
+release SAVE
+tap SAVE
+expect par1 45
+expect par6 0
+expect par4 2
+expect par39 1
+expect par26 1
+expect dirty 1
+# not answered in 5 s: kept
+tap HOME
+spin K2 5
+expect par1 50
+press SAVE
+wait 1700
+release SAVE
+wait 5200
+expect par1 50
+tap SAVE
+expect dirty 0

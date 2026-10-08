@@ -197,7 +197,7 @@ has and which one you're on.
 | **PLAY**                          |                  | Freeze the grain cloud (it keeps playing what's in its buffer); again to go live. Lit while frozen.                                                                                |
 | **REC**                           |                  | Palm mute: damps every tine at once                                                                                                                                                |
 | **OCT− / OCT+**                   |                  | Octave down / up (−2 to +2)                                                                                                                                                        |
-| **SAVE**                          |                  | Save now. Settings also save themselves about four seconds after a change, once everything is quiet.                                                                               |
+| **SAVE**                          |                  | Save now. Settings also save themselves about four seconds after a change, once everything is quiet. Hold for 1.5 s to reset to the defaults (below).                              |
 | **OCT− + OCT+, held 5 s**         |                  | Update mode (to install firmware)                                                                                                                                                  |
 | **OCT− + OCT+, held at power-on** |                  | Hardware calibration: the screen asks for each button and knob in turn                                                                                                             |
 
@@ -313,8 +313,13 @@ centre.
 | -------- | ------------------- | -------------------------------------------------------------------------------- |
 | Tune     | −50–+50 cents (0)   | Fine tuning                                                                      |
 | MIDI ch  | Omni, 1–16 (Omni)   | The channel MIDI is received on                                                  |
-| MIDI out | Off, On (On)        | Send the keys as MIDI notes                                                      |
+| MIDI out | Off, On (Off)       | Send the keys as MIDI notes                                                      |
 | Theme    | Light, Dark (Light) | The screen's colours: pale wood and dark ink, or near-black with cream and amber |
+
+**Reset to the defaults:** hold SAVE for 1.5 s. The header asks "RESET? SAVE: YES": press SAVE to
+put every sound setting back to its default (the pattern stops, frozen grains let go), or any other
+button or key, or nothing for 5 s, to keep everything. The Setup page (Tune, MIDI, Theme) is kept
+either way. Like any change, it's saved a few seconds later.
 
 The Setup page's header shows the firmware's **version** (DEV on a build that isn't a release) and
 the audio load (**CPU %**), and counts any dropouts, so you can check the firmware's load on the
@@ -337,6 +342,10 @@ hardware.
   keys' tines are a narrower second row between the white ones.
 - **The black-key strip:** what each black key plays: its chord, its note, or its Perform role. It
   lights while held.
+
+The keys' own lights follow the tines: a key lights while its tine rings. The middle of the kalimba,
+the key under the lowest tine (white key 9 in Tine, 8 in Mirror; in Keyboard the key that plays
+middle C), glows dimly so you can find it without looking.
 - **The knobs band:** the page's four values, each with its name, value and a bar. The one you
   turned is highlighted for a moment.
 
@@ -357,7 +366,7 @@ MIDI comes in over USB and the TRS jack, on the Setup page's MIDI channel (Omni 
 | Pitch bend                         | ±2 semitones, on every ringing tine                                                                                                             |
 | Clock, Start, Continue, Stop       | The pattern follows the clock: Start resets the cycle, Stop holds it                                                                            |
 
-**Out** (on by default): the keys are sent as notes on the Setup channel (channel 1 when Omni).
+**Out** (off by default; Setup KNOB 3): the keys are sent as notes on the Setup channel (channel 1 when Omni).
 
 ---
 

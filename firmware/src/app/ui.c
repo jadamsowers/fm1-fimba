@@ -40,6 +40,8 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_TUNE, P_MIDICH, P_MIDIOUT, P_THEME},
 };
 #define ARP_HOLD_MS 500u               /* ARP held this long: the Pattern page (a tap: the pattern on / off) */
+#define SAVE_HOLD_MS 1500u             /* SAVE held this long: reset to the defaults? (a tap: save) */
+#define RESET_ASK_MS 5000u             /* ...asked this long: SAVE again resets, anything else keeps */
 
 /* the Keys page follows the layout: Keyboard has no scale, key or black-key mode, but a transpose */
 static const uint8_t KEYS_KEYBOARD[4] = {P_LAYOUT, P_TRANSPOSE, P_OCTAVE, K_NONE};
@@ -109,6 +111,8 @@ static struct {
     uint8_t midi_held;                 /* MIDI notes held (a new chord starts when they are all up) */
     uint8_t pool_fresh;                /* this scan's keys start a new chord (none were held before it) */
     uint32_t arp_t;                    /* when ARP went down (held: the Pattern page) */
+    uint32_t save_t;                   /* when SAVE went down (held: reset to the defaults?) */
+    uint32_t reset_ask;                /* until when "RESET?" waits for SAVE (0: not asking) */
     uint8_t frozen;
     int16_t key_cents[NKEYS][4];       /* what each key plucked (to damp it, and its MIDI note off) */
     uint8_t key_n[NKEYS];
@@ -192,11 +196,18 @@ static int32_t accel(int role, int32_t s, int range)
     return s * (int32_t)m;
 }
 
+/* a knob that does nothing now: the wah on a body without a sound hole */
+static int knob_off(int k) { return (k == P_WAH || k == P_WAHRATE) && !km_body_hole(proj.par[P_BODY]); }
+
 static void turn(int role, int k, int32_t e)
 {
     const km_param_t *p = km_param_info(k);
     if (!e || k == K_NONE)
         return;
+    if (knob_off(k)) {
+        say("NO HOLE", "BOX OR GOURD");
+        return;
+    }
     knob_set(k, proj.par[k] + accel(role, e, p->hi - p->lo));
 }
 
@@ -389,9 +400,49 @@ static void set_view(int v)
     ui.touched = -1;
 }
 
+/* back to the defaults: every sound setting, the pattern stopped and the grains let go. The Setup page
+ * (tuning, MIDI, the theme) is about the room and the rig, not the sound: it stays. Saved as any change
+ * is, a few seconds on (autosave), or at once with SAVE. */
+static void reset_defaults(void)
+{
+    static const uint8_t KEEP[4] = {P_TUNE, P_MIDICH, P_MIDIOUT, P_THEME};
+    int16_t keep[4];
+    int i;
+    for (i = 0; i < 4; i++)
+        keep[i] = proj.par[KEEP[i]];
+    if (ui.pat_on)
+        pattern(0);
+    set_freeze(0);
+    project_defaults();
+    for (i = 0; i < 4; i++)
+        proj.par[KEEP[i]] = keep[i];
+    project_apply();
+    mark_dirty();
+    say("RESET", "TO DEFAULTS");
+}
+
+static void reset_ask(int on)
+{
+    ui.reset_ask = on ? plat_ms() + RESET_ASK_MS : 0u;
+    if (on) {
+        say("RESET?", "SAVE: YES");
+        ui.msg_until = ui.reset_ask;
+    } else {
+        say("KEPT", 0);
+    }
+}
+
 static void button(int b)
 {
     int v;
+    if (ui.reset_ask) {                             /* "RESET?": SAVE resets, any other button keeps */
+        ui.reset_ask = 0u;
+        if (b == B_SAVE)
+            reset_defaults();
+        else
+            say("KEPT", 0);
+        return;
+    }
     if (VIEW_BTN[ui.view] == b) {                   /* pressed again: its next page, or round to its first */
         v = ui.view + 1;
         if (v >= NVIEWS || VIEW_BTN[v] != b)
@@ -517,6 +568,8 @@ static void input(void)
             ui.btn_used &= ~m;
             if (i == B_ARP)
                 ui.arp_t = plat_ms();
+            if (i == B_SAVE)
+                ui.save_t = plat_ms();
             if (i == B_PLAY || i == B_REC)             /* the playing buttons act on the press */
                 button((int)i);
         } else if (!(ui.btn_used & m) && i != B_PLAY && i != B_REC) {
@@ -527,7 +580,16 @@ static void input(void)
         set_view(V_PATTERN);                         /* ARP held: the pattern's settings (no toggle on release) */
         ui.btn_used |= 1u << B_ARP;
     }
+    if ((btn >> B_SAVE & 1u) && !(ui.btn_used >> B_SAVE & 1u) && !ui.reset_ask &&
+        plat_ms() - ui.save_t >= SAVE_HOLD_MS) {
+        reset_ask(1);                                /* SAVE held: ask (no save on release) */
+        ui.btn_used |= 1u << B_SAVE;
+    }
+    if (ui.reset_ask && (int32_t)(plat_ms() - ui.reset_ask) >= 0)
+        reset_ask(0);                                /* not answered: kept */
     ch = keys ^ ui.keys;
+    if (ui.reset_ask && (ch & keys))                 /* a key while "RESET?" asks: kept (and it plays) */
+        reset_ask(0);
     ui.pool_fresh = !ui.keys;                    /* (several keys down in one scan: one new chord) */
     ui.keys = keys;
     for (i = 0; i < NBLACK; i++)                       /* black first: an octave key held changes the tines */
@@ -876,6 +938,11 @@ static void draw_knobs(void)
             cv_rect(x, 14, 1, KNB_H - 30, K_LINE);
         if (k == K_NONE)
             continue;
+        if (knob_off(k)) {                           /* no hole to cover: the name greyed, no value, no bar */
+            text_c(cx, 6, &FONT_XS, km_param_info(k)->name, K_LINE);
+            text_c(cx, 26, &FONT_B, "--", K_LINE);
+            continue;
+        }
         lo = km_param_info(k)->lo;
         hi = km_param_info(k)->hi;
         v = proj.par[k];
@@ -903,6 +970,19 @@ static void draw_knobs(void)
     cv_blit(0, KNB_Y);
 }
 
+/* the middle of the kalimba, marked by a dim LED: the key under the lowest tine (Tine: key 9, Mirror:
+ * key 8); in the Keyboard layout, the key that plays middle C, if one does. -1: none */
+static int center_key(void)
+{
+    int i;
+    if (!keyboard())
+        return WHITE_K[proj.par[P_LAYOUT] == LAY_MIRROR ? 7 : 8];
+    for (i = 0; i < NKEYS; i++)
+        if (km_keyboard_cents(proj.par[P_TRANSPOSE], octave_now(), i) == 6000)
+            return i;
+    return -1;
+}
+
 static void leds(void)
 {
     uint32_t b = VIEW_BTN[ui.view] < NB ? 1u << VIEW_BTN[ui.view] : 0u, k = 0, i;
@@ -925,7 +1005,7 @@ static void leds(void)
             k |= 1u << BLACK_K[PF_FREEZE];
         k |= 1u << BLACK_K[PF_MAT0 + proj.par[P_MATERIAL]];
     }
-    plat_leds(b, k);
+    plat_leds(b, k, center_key() >= 0 ? 1u << center_key() : 0u);
 }
 
 /* AUTOSAVE: a few seconds after a change, when nothing rings and nothing is touched: a flash erase

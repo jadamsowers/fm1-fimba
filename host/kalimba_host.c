@@ -25,6 +25,7 @@
  *                                 dropped pat pool pulse ext parN whiteW (cents of white key W) keyK (cents of key K, Keyboard
  *                                 layout) tineC (level x100 of the tine at
  *                                 C cents) lumaY (brightness 0..255 of the screen at x 2, row Y: the theme)
+ *                                 dimkey (the key whose LED is dim, -1 none) litkeys (bits)
  *                                 peak_db_max peak_db_min)
  *   reboot                       re-run boot from the simulated flash (persistence test)
  *   oldproject                   put a format 1 project (Material 2) in the simulated flash
@@ -70,7 +71,7 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
 
 static uint32_t now_ms, held_btn, held_keys, master = 2048;
 static int32_t enc_acc[NE];
-static uint32_t lit_btn, lit_keys;
+static uint32_t lit_btn, lit_keys, dim_keys;
 
 uint32_t plat_ms(void) { return now_ms; }
 uint32_t plat_buttons(void) { return held_btn; }
@@ -82,10 +83,11 @@ int32_t plat_enc(int role)
     return v;
 }
 uint32_t plat_master(void) { return master; }
-void plat_leds(uint32_t b, uint32_t k)
+void plat_leds(uint32_t b, uint32_t k, uint32_t d)
 {
     lit_btn = b;
     lit_keys = k;
+    dim_keys = d & ~k;                           /* (a lit key is lit, not dim: plat_fm1.c) */
 }
 
 #define MQ 256
@@ -398,6 +400,13 @@ static int expect(const char *what, const char *val)
         got = key_cents(atoi(what + 3));
     else if (!strncmp(what, "tine", 4))           /* tineC: the level x 100 of the tine at C cents */
         got = tine(atoi(what + 4));
+    else if (!strcmp(what, "dimkey")) {            /* the key whose LED is dim (-1: none) */
+        int q;
+        for (got = -1, q = 0; q < NKEYS; q++)
+            if (dim_keys >> q & 1u)
+                got = q;
+    } else if (!strcmp(what, "litkeys"))         /* the keys lit (bit per key) */
+        got = (int)lit_keys;
     else if (!strncmp(what, "luma", 4)) {         /* lumaY: the screen's brightness at (2, Y) */
         uint16_t p = fb[(atoi(what + 4) % 240) * 240 + 2];
         p = (uint16_t)((p >> 8) | (p << 8));
@@ -537,10 +546,10 @@ int main(int argc, char **argv)
                     printf(" %s", BTN_N[i]);
             printf(" | white ");
             for (i = 0; i < 16; i++)
-                printf("%c", (lit_keys >> WHITE_K[i] & 1u) ? '#' : '.');
+                printf("%c", (lit_keys >> WHITE_K[i] & 1u) ? '#' : (dim_keys >> WHITE_K[i] & 1u) ? '+' : '.');
             printf(" black ");
             for (i = 0; i < 11; i++)
-                printf("%c", (lit_keys >> BLACK_K[i] & 1u) ? '#' : '.');
+                printf("%c", (lit_keys >> BLACK_K[i] & 1u) ? '#' : (dim_keys >> BLACK_K[i] & 1u) ? '+' : '.');
             printf("\n");
         } else if (!strcmp(cmd, "expect"))
             fails += expect(a, b);
