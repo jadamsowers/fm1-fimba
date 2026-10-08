@@ -241,8 +241,8 @@ Each page puts up to four values on KNOB 1–4. The values are saved with your s
 | -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Body     | None, Board, Box, Gourd (Box) | None: the bare tine. Board: a plank, thin and bright, with a woody knock. Box: a hollow box with a sound hole, warm, with a bloom around 200 Hz. Gourd: a calabash resonator, boomy, hollow and dark. All at about the same loudness. |
 | Buzz     | 0–100 (0)                     | Mbira buzzers (bottle caps, shells) that rattle when the body moves past a threshold                                                                                                                                                  |
-| Wah      | 0–100 (0)                     | How much of the sound hole a finger covers: the hole's resonance drops and darkens (Box and Gourd only)                                                                                                                               |
-| Wah rate | Hand, 1–100 (Hand)            | Hand: the hole moves only with the Wah knob, the mod wheel, pressure or the Hole key. Above that, a hand fluttering over it, 0.1 to 8 Hz.                                                                                             |
+| Wah      | 0–100 (0)                     | How much of the sound hole a hand covers: the sound comes out muffled, like a vowel closing, and a little quieter (Box and Gourd only: Board and None have no hole)                                                                   |
+| Wah rate | Off, 1–100 (Off)              | Off: the hole moves only with the Wah knob, the mod wheel, pressure or the Hole key. Above that, a hand fluttering over it, 0.1 to 8 Hz.                                                                                              |
 
 **FX → Space**
 
@@ -407,9 +407,11 @@ The tines' sound passes through the body:
 - **Tone shaping** of the direct sound. A plank radiates little bass; a box warms the sound; a gourd
   makes it hollow and dark.
 - **Four resonances.** The first is the **air mode** of the sound hole (a Helmholtz resonance, like
-  blowing across a bottle); the others are the wood's or the shell's own modes. Covering the hole
-  lowers and darkens the air mode, since its frequency follows the square root of the open area.
-  That's the kalimba's "wah".
+  blowing across a bottle); the others are the wood's or the shell's own modes.
+- **The hole.** A hand over it muffles what the body radiates, like a vowel closing: a resonant
+  low-pass that sweeps from open (nothing cut) down to about 400 Hz covered, a little quieter. It
+  also lowers the air mode, whose frequency follows the square root of the open area. That's the
+  kalimba's "wah".
 - **The knock.** Each pluck's force reaches the body as well as the tine.
 - **Buzzers** rattle when the body moves past a gap, never quite the same twice.
 

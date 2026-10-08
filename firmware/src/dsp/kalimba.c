@@ -221,7 +221,7 @@ void km_param_text(int i, int v, char *b)
         break;
     case P_WAHRATE:
         if (!v) {
-            copy_s(b, "Hand");                    /* no LFO: the knob, the mod wheel, a black key */
+            copy_s(b, "Off");                     /* no LFO: the knob, the mod wheel, a black key */
             return;
         }
         break;
@@ -556,6 +556,14 @@ static inline float svf_bp(svf_t *s, float x)
     s->s2 = 2.0f * v2 - s->s2;
     return v1;
 }
+/* the same, its low-pass output (the hand over the hole) */
+static inline float svf_lp(svf_t *s, float x)
+{
+    float v3 = x - s->s2, v1 = s->a1 * s->s1 + s->a2 * v3, v2 = s->s2 + s->a2 * s->s1 + s->a3 * v3;
+    s->s1 = 2.0f * v1 - s->s1;
+    s->s2 = 2.0f * v2 - s->s2;
+    return v2;
+}
 /* The bodies. What the ear tells them apart by: how the direct sound is coloured (a plank radiates
  * little bass and sounds thin; a box warms it; a gourd is hollow and dark), the body's own resonances
  * among the tines' frequencies, and the knock of each pluck through the wood (the thumb pushes the
@@ -578,45 +586,73 @@ static const body_t BODIES[BODY_N] = {
     {{{135.0f, 6.0f, 2.2f}, {330.0f, 4.0f, 1.1f}, {760.0f, 5.0f, 0.8f}, {1650.0f, 4.0f, 0.25f}},
      0.0f, 3800.0f, 1.4f, 0.5f},                                                           /* Gourd: hollow, boomy, dark */
 };
-static svf_t bf[4];
+static svf_t bf[4], muf_l, muf_r;
 static float hole_amt[HOLE_N], wah_ph, wah_inc;
+static float cover_now, cover_to, muf_g = 1.0f, muf_gain = 1.0f;  /* the hand over the hole: where it is, where it
+                                                                   * goes; the level it leaves (target, now) */
 static float tone_lo_a, tone_hi_a, tlo_l, tlo_r, thi_l, thi_r, knock_g, body_out = 1.0f;
 
 static float onepole(float hz) { return hz > 0.0f ? 1.0f - fm_expf(-FM_TWO_PI * hz / KM_SR) : 1.0f; }
 
-static void body_coefs(void)
+static void svf_set(svf_t *f, float hz, float qq, float gain)
 {
-    const body_t *bd = &BODIES[(unsigned)par[P_BODY] < BODY_N ? par[P_BODY] : 0];
-    float cover = (float)par[P_WAH] * 0.01f, o, lfo;
+    float g = fm_tanf(FM_PI * hz / KM_SR), k = 1.0f / qq;
+    f->a1 = 1.0f / (1.0f + g * (g + k));
+    f->a2 = g * f->a1;
+    f->a3 = g * f->a2;
+    f->gain = gain * k;                                 /* the band-pass peaks at 1/k: level by gain */
+}
+
+/* how much of the hole is covered: the Wah knob, the hand sources, the LFO (render_body glides to it) */
+static void cover_target(void)
+{
+    float cover = (float)par[P_WAH] * 0.01f, lfo;
     int i;
     for (i = 0; i < HOLE_N; i++)
         cover += hole_amt[i];
-    if (par[P_WAHRATE]) {                               /* the hand over the hole, in time */
+    if (par[P_WAHRATE]) {                               /* a hand fluttering over the hole, in time */
         lfo = 0.5f - 0.5f * fm_cosf(wah_ph * FM_TWO_PI);
         cover = cover + lfo * (1.0f - cover);
     }
-    cover = fm_clampf(cover, 0.0f, 1.0f);
-    o = 1.0f - 0.9f * cover;
+    cover_to = fm_clampf(cover, 0.0f, 1.0f);
+}
+
+/* The hole, covered by cover_now. Two things a hand over it does: the air mode drops (Helmholtz: f ~
+ * sqrt(the hole's area)), and the body's sound comes out muffled, as a vowel closing, the "wah" the
+ * ear hears: a resonant low-pass from ~18 kHz open (nothing) to ~400 Hz covered, a little quieter.
+ * The tines sit above the air mode, so the low-pass is what makes the wah audible. A body without a
+ * hole (None, Board) has neither. */
+static void hole_coefs(void)
+{
+    const body_t *bd = &BODIES[(unsigned)par[P_BODY] < BODY_N ? par[P_BODY] : 0];
+    float c = cover_now, o = 1.0f - 0.9f * c, hz = bd->m[0][0], u = 1.0f - c;
     km_hole_open = o;
-    for (i = 0; i < 4; i++) {
-        float hz = bd->m[i][0], qq = bd->m[i][1], gain = bd->m[i][2];
-        if (i == 0 && hz > 0.0f) {                      /* Helmholtz: f ~ sqrt(the hole's area) */
-            hz *= fm_sqrtf(o);
-            gain *= 0.35f + 0.65f * o;
-            qq *= 1.0f + 0.8f * (1.0f - o);
-        }
-        if (hz <= 0.0f || gain <= 0.0f) {
-            bf[i].gain = 0.0f;
-            continue;
-        }
-        {
-            float g = fm_tanf(FM_PI * hz / KM_SR), k = 1.0f / qq;
-            bf[i].a1 = 1.0f / (1.0f + g * (g + k));
-            bf[i].a2 = g * bf[i].a1;
-            bf[i].a3 = g * bf[i].a2;
-            bf[i].gain = gain * k;                      /* the band-pass peaks at 1/k: level by gain */
-        }
+    if (hz <= 0.0f) {
+        bf[0].gain = 0.0f;
+        muf_g = 0.0f;                                   /* (no muffling: render_body skips it) */
+        return;
     }
+    svf_set(&bf[0], hz * fm_sqrtf(o), bd->m[0][1] * (1.0f + 0.8f * (1.0f - o)), bd->m[0][2] * (0.35f + 0.65f * o));
+    /* 18 kHz open, 1.5 kHz half covered (among the tines' overtones), 400 Hz covered */
+    svf_set(&muf_l, 400.0f * fm_exp2f(5.49f * u * fm_sqrtf(u)), 0.707f + 1.5f * c, 1.0f);
+    muf_r = (svf_t){muf_r.s1, muf_r.s2, muf_l.a1, muf_l.a2, muf_l.a3, muf_l.gain};
+    if (muf_g <= 0.0f)                                  /* (a hole again: its level from where it is) */
+        muf_gain = 1.0f - 0.5f * c;
+    muf_g = 1.0f - 0.5f * c;
+}
+
+static void body_coefs(void)
+{
+    const body_t *bd = &BODIES[(unsigned)par[P_BODY] < BODY_N ? par[P_BODY] : 0];
+    int i;
+    for (i = 1; i < 4; i++) {
+        if (bd->m[i][0] <= 0.0f || bd->m[i][2] <= 0.0f)
+            bf[i].gain = 0.0f;
+        else
+            svf_set(&bf[i], bd->m[i][0], bd->m[i][1], bd->m[i][2]);
+    }
+    cover_target();
+    hole_coefs();
     tone_lo_a = bd->lo_cut > 0.0f ? onepole(bd->lo_cut) : 0.0f;
     tone_hi_a = onepole(bd->hi_cut);
     knock_g = bd->knock;
@@ -1209,6 +1245,9 @@ static void quiet(void)
     lf_l = lf_r = hiss_env = 0.0f;
     for (i = 0; i < 4; i++)
         bf[i].s1 = bf[i].s2 = 0.0f;
+    muf_l.s1 = muf_l.s2 = muf_r.s1 = muf_r.s2 = 0.0f;
+    cover_now = cover_to = 0.0f;
+    muf_g = 0.0f;                                       /* (body_coefs, below, sets the level directly) */
     tlo_l = tlo_r = thi_l = thi_r = 0.0f;
     d_lp = d_cur_l = d_cur_r = d_prev_l = d_prev_r = 0.0f;
     plate_init();
@@ -1502,23 +1541,51 @@ static void render_body(uint32_t n)
         wah_ph += wah_inc * (float)n;
         if (wah_ph >= 1.0f)
             wah_ph -= 1.0f;
-        body_coefs();
+        cover_target();
     }
     if (par[P_BODY] != BODY_NONE) {
         const float la = tone_lo_a, ha = tone_hi_a, kg = knock_g * 6.0f, out = body_out;
-        for (j = 0; j < n; j++) {
-            float x = mono[j] + knock[j] * kg, b = 0.0f, l = mixl[j], r = mixr[j];
-            for (i = 0; i < 4; i++)
-                if (bf[i].gain > 0.0f)
-                    b += svf_bp(&bf[i], x) * bf[i].gain;
-            thi_l += ha * (l - thi_l);                  /* the direct sound through the body's tone */
-            thi_r += ha * (r - thi_r);
-            tlo_l += la * (thi_l - tlo_l);
-            tlo_r += la * (thi_r - tlo_r);
-            mixl[j] = (thi_l - tlo_l + b) * out;
-            mixr[j] = (thi_r - tlo_r + b) * out;
-            mono[j] = (mono[j] + b) * out;
+        uint32_t j0, j1;
+        /* in steps of 8 samples, the hand gliding to where it goes in ~20 ms (the cut-off ~5% a step), the
+         * level ramped sample by sample: a hand landing on the hole at once (the Hole key) doesn't click */
+        for (j0 = 0; j0 < n; j0 = j1) {
+            float g, dg;
+            j1 = j0 + 8u < n ? j0 + 8u : n;
+            if (fm_fabsf(cover_to - cover_now) > 0.0002f) {
+                cover_now += (cover_to - cover_now) * 0.009f;
+                hole_coefs();
+            } else if (cover_now != cover_to) {
+                cover_now = cover_to;
+                hole_coefs();
+            }
+            g = muf_gain;
+            dg = (muf_g - g) / (float)(j1 - j0);
+            for (j = j0; j < j1; j++) {
+                float x = mono[j] + knock[j] * kg, b = 0.0f, l = mixl[j], r = mixr[j];
+                for (i = 0; i < 4; i++)
+                    if (bf[i].gain > 0.0f)
+                        b += svf_bp(&bf[i], x) * bf[i].gain;
+                thi_l += ha * (l - thi_l);              /* the direct sound through the body's tone */
+                thi_r += ha * (r - thi_r);
+                tlo_l += la * (thi_l - tlo_l);
+                tlo_r += la * (thi_r - tlo_r);
+                l = (thi_l - tlo_l + b) * out;
+                r = (thi_r - tlo_r + b) * out;
+                if (muf_g > 0.0f) {                     /* a hole: what comes out of it, muffled as it's covered */
+                    g += dg;
+                    l = svf_lp(&muf_l, l) * g;
+                    r = svf_lp(&muf_r, r) * g;
+                }
+                mixl[j] = l;
+                mixr[j] = r;
+                mono[j] = (mono[j] + b) * out;
+            }
+            muf_gain = muf_g;
         }
+        muf_l.s1 = fm_flush(muf_l.s1);
+        muf_l.s2 = fm_flush(muf_l.s2);
+        muf_r.s1 = fm_flush(muf_r.s1);
+        muf_r.s2 = fm_flush(muf_r.s2);
         thi_l = fm_flush(thi_l);
         thi_r = fm_flush(thi_r);
         tlo_l = fm_flush(tlo_l);

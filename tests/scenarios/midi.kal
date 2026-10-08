@@ -41,10 +41,10 @@ wait 20
 expect tine6700 >5
 # CC1: the hole; CC74: Tone; CC91: Reverb; program change: material
 midi B2 01 7F
-wait 20
+wait 150
 expect hole <15
 midi B2 01 00
-wait 20
+wait 150
 expect hole 100
 midi B2 4A 00
 midi B2 5B 7F
