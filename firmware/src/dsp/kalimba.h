@@ -56,7 +56,7 @@ void km_param_text(int i, int v, char *buf);   /* the value as the screen shows 
 
 enum { MAT_STEEL, MAT_BRASS, MAT_BRONZE, MAT_ALU, MAT_BAMBOO, MAT_GLASS, MAT_N };
 enum { BODY_NONE, BODY_BOARD, BODY_BOX, BODY_GOURD, BODY_N };
-enum { LAY_TINE, LAY_KEYBOARD, LAY_N };
+enum { LAY_TINE, LAY_KEYBOARD, LAY_MIRROR, LAY_N };   /* Mirror: Tine right for left (last: saves keep their values) */
 enum { BLK_CHORDS, BLK_SHARPS, BLK_PERFORM, BLK_N };
 enum { PAT_THUMBS, PAT_CASCADE, PAT_HEMIOLA, PAT_INTERLOCK, PAT_N };
 enum { TUNE_EQUAL, TUNE_JUST, TUNE_N };
@@ -77,7 +77,7 @@ const km_material_t *km_material(int i);
 /* ---- music: everything in cents over MIDI note 0 (6000 = middle C) */
 int km_scale_len(int scale);
 int km_degree_cents(int scale, int degree);        /* the degree's cents over the tonic (any degree, < 0 too) */
-/* Tine layout: the tine a white key plays (scale, key 0..11, octave; w 0..15 left to right) */
+/* Tine (or Mirror) layout: the tine a white key plays (scale, key 0..11, octave; w 0..15 left to right) */
 int km_white_cents(int layout, int scale, int key, int octave, int w);
 /* Keyboard layout: the note of key k (0..26, F3..G5, white and black as printed), transposed */
 int km_keyboard_cents(int transpose, int octave, int k);

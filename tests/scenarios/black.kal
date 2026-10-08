@@ -36,25 +36,25 @@ expect tine6200 <2
 spin K4 -1
 expect par23 0
 tap SEL
-# Sharps: b0 is w0's tine (C6 in Tine layout) a semitone up
+# Sharps: b0 is w0's tine (D6 in Tine layout) a semitone up
 spin K4 1
 expect par19 1
 wait 50
 shot sharps.png
 tapkey b0
 wait 20
-expect tine8500 >5
-# b3 (C#4) sits right of w4 (C4), whose tine in the Tine layout is B4: B4 + 100
+expect tine8700 >5
+# b3 (C#4) sits right of w4 (C4), whose tine in the Tine layout is C5: C5 + 100
 tapkey b3
 wait 20
-expect white4 7100
-expect tine7200 >5
+expect white4 7200
+expect tine7300 >5
 # Perform
 spin K4 1
 expect par19 2
 wait 50
 shot perform.png
-tapkey w7
+tapkey w8
 wait 50
 expect tine6000 >5
 # Mute: every tine damped
@@ -79,7 +79,7 @@ expect frozen 0
 key b3 down
 wait 10
 expect octshift -1
-tapkey w7
+tapkey w8
 wait 30
 expect tine4800 >5
 key b3 up

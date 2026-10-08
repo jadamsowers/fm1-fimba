@@ -19,14 +19,14 @@ expect store_writes 2
 expect dirty 0
 reboot
 expect par3 25
-# a scale and a key on the Tine layout: A minor pentatonic, A3 in the middle, C4 right of it
+# a scale and a key on the Tine layout: A minor pentatonic, A3 in the middle, C4 left of it
 tap SEL
 spin K2 3
 spin K3 9
 expect par17 3
 expect par18 9
-expect white7 5700
-expect white8 6000
+expect white8 5700
+expect white7 6000
 tap SAVE
 reboot
 expect par18 9

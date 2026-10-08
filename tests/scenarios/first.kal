@@ -6,19 +6,19 @@ wav first.wav
 wait 300
 shot home.png
 expect view 0
-expect white7 6000
-expect white8 6200
-expect white6 6400
-expect white0 8400
+expect white8 6000
+expect white7 6200
+expect white9 6400
+expect white15 8400
 # the middle out, alternating sides: C D E F G A B C
-tapkey w7
 tapkey w8
-tapkey w6
+tapkey w7
 tapkey w9
-tapkey w5
+tapkey w6
 tapkey w10
-tapkey w4
+tapkey w5
 tapkey w11
+tapkey w4
 wait 50
 shot ringing.png
 expect tine7200 >10
@@ -88,14 +88,14 @@ turn ALGO 2
 expect par17 2
 turn PRESET 3
 expect par18 3
-expect white7 6300
+expect white8 6300
 turn PRESET -4
 expect par18 11
 # B, pentatonic: the middle tine B3 (the octave starts at C4)
-expect white7 5900
+expect white8 5900
 tap OCT-
 expect par28 -1
-expect white7 4700
+expect white8 4700
 tap OCT+
 tap OCT+
 expect par28 1

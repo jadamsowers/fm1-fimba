@@ -89,6 +89,8 @@ In rough order:
 - GitHub Actions to test everything, build the firmware, publish releases and this site, and a firmware
   updater in the web page.
 - The first install on a real FM-1, from the web page's updater: it boots and plays.
+- The Tine layout turned round to match a real 17-key kalimba, the second note left of the lowest
+  ([#1](https://github.com/jadamsowers/fm1-fimba/issues/1)); **Mirror** keeps the other way.
 
 ## Credits
 
@@ -135,17 +137,22 @@ M-VAVE, Hügelton Instruments, Charles Vestal or Baudgirl.
 What the keys do depends on the **Layout** (Keys page).
 
 **Tine layout** (the default) is a 17-key kalimba in C, laid out as on the instrument. The lowest
-tine is in the middle and the scale alternates outward, left, right, left, right. Each thumb gets
-every other note, and thirds sit side by side.
+tine is just right of the middle, and the scale alternates outward: left, right, left, right. Each
+thumb gets every other note, and thirds sit side by side. It's the 17-key kalimba's D6 … C4 … C6,
+without its top E6.
 
-| White key  | 1   | 2   | 3   | 4   | 5   | 6   | 7   | **8**  | 9   | 10  | 11  | 12  | 13  | 14  | 15  | 16  |
-| ---------- | --- | --- | --- | --- | --- | --- | --- | ------ | --- | --- | --- | --- | --- | --- | --- | --- |
-| In C major | C6  | A5  | F5  | D5  | B4  | G4  | E4  | **C4** | D4  | F4  | A4  | C5  | E5  | G5  | B5  | D6  |
+**Mirror** is the same kalimba flipped: the lowest tine sits just left of the middle and the next
+note is to its right.
+
+| White key  | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8      | 9      | 10  | 11  | 12  | 13  | 14  | 15  | 16  |
+| ---------- | --- | --- | --- | --- | --- | --- | --- | ------ | ------ | --- | --- | --- | --- | --- | --- | --- |
+| Tine, C    | D6  | B5  | G5  | E5  | C5  | A4  | F4  | D4     | **C4** | E4  | G4  | B4  | D5  | F5  | A5  | C6  |
+| Mirror, C  | C6  | A5  | F5  | D5  | B4  | G4  | E4  | **C4** | D4     | F4  | A4  | C5  | E5  | G5  | B5  | D6  |
 
 Scale and Key change the notes. The lowest tine always sits between F♯3 and F4, so a kalimba in C
 starts on C4 and one in B on B3; OCT−/OCT+ move it.
 
-In the Tine layout, the **black keys** do what **Black** says (Keys page, KNOB 4):
+In the Tine and Mirror layouts, the **black keys** do what **Black** says (Keys page, KNOB 4):
 
 - **Chords** (default): each key rolls a chord across the tines the way a thumb slides over them
   (root, third, fifth, octave), **Strum ms** apart. The first seven keys are the triads on the
@@ -275,11 +282,11 @@ centre.
 | Feedback | 0–95 (45)       | How many echoes: each is this fraction of the one before                        |
 | Width    | 0–100 (70)      | Stereo width: the tines' spread from left to right, and the grains' and echoes' |
 
-**SEL → Keys**: Layout, Scale, Key, Black in the Tine layout; Layout, Transpose, Octave in Keyboard
+**SEL → Keys**: Layout, Scale, Key, Black in the Tine and Mirror layouts; Layout, Transpose, Octave in Keyboard
 
 | Knob      | Range (default)                                                                                                      | What it does                                                                                                                               |
 | --------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Layout    | Tine, Keyboard (Tine)                                                                                                | [Keys](#keys)                                                                                                                              |
+| Layout    | Tine, Keyboard, Mirror (Tine)                                                                                        | [Keys](#keys)                                                                                                                              |
 | Scale     | Major, Minor, Penta, Penta m, Dorian, Mixolydian, Lydian, Harmonic minor, Hirajoshi, Blues, Mbira, Chromatic (Major) | The tines' scale (Tine layout). Mbira approximates a Shona _Nyamaropa_ tuning, close to an equal seven-step octave with a near-pure fifth. |
 | Key       | C–B (C)                                                                                                              | The tonic (Tine layout)                                                                                                                    |
 | Black     | Chords, Sharps, Perform (Chords)                                                                                     | What the black keys do (Tine layout)                                                                                                       |

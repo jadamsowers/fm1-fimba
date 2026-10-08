@@ -6,6 +6,7 @@
  *                  Black: Chords (a thumb roll of the scale's chords), Sharps (the white key's tine a
  *                  semitone up) or Perform (palm mute, hole, freeze, octave down / up while held,
  *                  six materials)
+ *   Layout Mirror  Tine right for left: the lowest tine left of the middle, the next up on its right
  *   Layout Keyboard every key, white and black, plays its printed note (F3 on the lowest), shifted
  *                  by Transpose (and the octave): a chromatic kalimba with a tine per key
  *   PLAY freeze the grains     REC palm mute (every tine)     ARP tap: the mbira pattern on / off, over

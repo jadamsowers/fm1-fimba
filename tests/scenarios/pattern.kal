@@ -33,7 +33,7 @@ wait 1500
 shot pattern_running.png
 spin K1 -3
 # the white keys still play over it (Tine layout)
-tapkey w7
+tapkey w8
 wait 20
 expect tine6000 >5
 tap ARP
@@ -55,9 +55,9 @@ expect par37 1
 tap SEL
 spin K4 1
 expect par19 1
-expect white6 6386
-expect white7 6000
-tapkey w6
+expect white9 6386
+expect white8 6000
+tapkey w9
 wait 30
 expect tine6386 >5
 tap GLO
@@ -65,7 +65,7 @@ tap HOME
 tap HOME
 spin K3 -1
 expect par37 0
-expect white6 6400
+expect white9 6400
 # the Keyboard layout with the pattern: the keys held are its chord
 tap SEL
 spin K1 1

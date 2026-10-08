@@ -143,19 +143,26 @@ static void test_music(void)
 {
     int i, c[4], n;
     char b[12];
-    /* Tine: C4 in the middle (w7), D4 right of it, E4 left of it: the 17-key kalimba in C */
-    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 7) == 6000, "tine w7 %d", km_white_cents(LAY_TINE, 0, 0, 0, 7));
-    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 8) == 6200, "tine w8");
-    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 6) == 6400, "tine w6");
-    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 0) == 6000 + 2400, "tine w0 (degree 14: C6) %d", km_white_cents(LAY_TINE, 0, 0, 0, 0));
-    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 15) == 8600, "tine w15 (D6)");
+    /* Tine: C4 in the middle (w8), D4 left of it, E4 right of it: the 17-key kalimba in C */
+    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 8) == 6000, "tine w8 %d", km_white_cents(LAY_TINE, 0, 0, 0, 8));
+    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 7) == 6200, "tine w7");
+    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 9) == 6400, "tine w9");
+    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 0) == 8600, "tine w0 (degree 15: D6) %d", km_white_cents(LAY_TINE, 0, 0, 0, 0));
+    CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 15) == 6000 + 2400, "tine w15 (C6)");
     for (i = 1; i < 8; i++) {                    /* the V: each step out from the middle goes up */
         CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 7 - i) > km_white_cents(LAY_TINE, 0, 0, 0, 8 - i), "tine left V %d", i);
         CHECK(km_white_cents(LAY_TINE, 0, 0, 0, 8 + i) > km_white_cents(LAY_TINE, 0, 0, 0, 7 + i), "tine right V %d", i);
     }
-    CHECK(km_white_cents(LAY_TINE, 3, 9, 0, 7) == 5700, "A minor-penta: A3 in the middle %d", km_white_cents(LAY_TINE, 3, 9, 0, 7));
-    CHECK(km_white_cents(LAY_TINE, 0, 5, 0, 7) == 6500 && km_white_cents(LAY_TINE, 0, 6, 0, 7) == 5400, "keys fold at F#");
-    CHECK(km_white_cents(LAY_TINE, 2, 0, 0, 10) == 7200, "penta wraps at 5 (w10 is degree 5)");
+    CHECK(km_white_cents(LAY_TINE, 3, 9, 0, 8) == 5700, "A minor-penta: A3 in the middle %d", km_white_cents(LAY_TINE, 3, 9, 0, 8));
+    CHECK(km_white_cents(LAY_TINE, 0, 5, 0, 8) == 6500 && km_white_cents(LAY_TINE, 0, 6, 0, 8) == 5400, "keys fold at F#");
+    CHECK(km_white_cents(LAY_TINE, 2, 0, 0, 5) == 7200, "penta wraps at 5 (w5 is degree 5)");
+    /* Mirror: the same V right for left: C4 on w7, D4 right of it, E4 left of it */
+    CHECK(km_white_cents(LAY_MIRROR, 0, 0, 0, 7) == 6000, "mirror w7 %d", km_white_cents(LAY_MIRROR, 0, 0, 0, 7));
+    CHECK(km_white_cents(LAY_MIRROR, 0, 0, 0, 8) == 6200, "mirror w8");
+    CHECK(km_white_cents(LAY_MIRROR, 0, 0, 0, 6) == 6400, "mirror w6");
+    CHECK(km_white_cents(LAY_MIRROR, 0, 0, 0, 0) == 8400 && km_white_cents(LAY_MIRROR, 0, 0, 0, 15) == 8600, "mirror ends (C6, D6)");
+    for (i = 0; i < 16; i++)
+        CHECK(km_white_cents(LAY_MIRROR, 4, 2, 1, i) == km_white_cents(LAY_TINE, 4, 2, 1, 15 - i), "mirror of tine %d", i);
     /* Keyboard: the keys as printed, F3 on the lowest, chromatic, transposed */
     for (i = 0; i < 27; i++)
         CHECK(km_keyboard_cents(0, 0, i) == 5300 + 100 * i, "keyboard key %d", i);
