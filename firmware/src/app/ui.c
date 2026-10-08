@@ -849,6 +849,19 @@ static void draw_knobs(void)
         char t[16];
         if (i)
             cv_rect(x, 14, 1, KNB_H - 30, K_LINE);
+        if (k == K_NONE && ui.view == V_SETUP && i == 3) {  /* the version, "0.4.1" over "BETA" (or "DEV") */
+            int n = 0;
+            while (OM_VERSION[n] && OM_VERSION[n] != ' ' && n < 15) {
+                t[n] = OM_VERSION[n];
+                n++;
+            }
+            t[n] = 0;
+            text_c(cx, 6, &FONT_XS, "Version", K_DIM);
+            text_c(cx, text_w(&FONT_M, t) > 56 ? 26 : 22, text_w(&FONT_M, t) > 56 ? &FONT_B : &FONT_M, t, K_TEXT);
+            if (OM_VERSION[n])
+                text_c(cx, 48, &FONT_XS, OM_VERSION + n + 1, K_DIM);
+            continue;
+        }
         if (k == K_NONE)
             continue;
         lo = km_param_info(k)->lo;
