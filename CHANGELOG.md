@@ -4,6 +4,15 @@ A release is a push to `main` that changes `VERSION` to a version with no tag ye
 release build, tags the commit `vX.Y.Z` and publishes the GitHub Release with that version's notes,
 taken from its section below. Add the section in the same pull request as the `VERSION` change.
 
+## 0.5.0
+
+- **Theme**, a new knob on the Setup page (GLO, KNOB 4): **Light**, the pale wood and dark ink as
+  before, or **Dark**, near-black with cream and amber. In Dark the knob bars and the chips turn cream
+  and brown, so amber only means a tine sounding or a knob touched. The tines keep their metal in both.
+  The screen changes at once, and the theme is saved with your settings.
+- The Setup page's header shows the firmware's version, beside the CPU load.
+- Saved settings carry over; Theme starts on Light.
+
 ## 0.4.1
 
 - **Tine is now left-first**, as on a 17-key kalimba in C. C4 sits on white key 9, the next note up
