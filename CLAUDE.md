@@ -52,6 +52,9 @@ The steps for every GitHub issue or new feature, from the first look to the rele
 - `gh pr checks N --watch` until CI passes. Fix failures on the branch.
 - The user merges PRs: don't merge them yourself unless told to for that PR. Rebase merges keep
   `main` linear.
+- Before pushing a follow-up to a PR's branch, check it's still open (`gh pr view N --json state`).
+  The user may have merged (and so released) it already: then branch from `main` again, bump
+  `VERSION` again, and open a new PR.
 
 ## 7. Release (automatic)
 
