@@ -6,16 +6,19 @@
 #   push to main      the same, then the browser version published to
 #                     https://jadamsowers.github.io/fm1-fimba/, with the latest release's firmware
 #                     beside it for the page's installer (firmware/latest.json)
-#   tag vX.Y[.Z]      the same, with a release build (identity FM-1_8XXYYZZ, version on the splash),
-#                     published as a GitHub Release with the .fwsc and the one-file web app, and the
-#                     site republished with that firmware in its installer
+#   a new VERSION     a push to main whose VERSION has no tag yet is a release: a release build
+#                     (identity FM-1_8XXYYZZ, version on the splash and the Setup page), the commit
+#                     tagged vX.Y.Z and published as a GitHub Release with the .fwsc, the one-file web
+#                     app and its CHANGELOG.md section, and the site published with that firmware in its
+#                     installer, all in this one run. (A tag pushed by a run starts no other run, and
+#                     Pages keeps only the first deployment of a commit: the release can't be a
+#                     second run.)
 name: Test, build and publish
 
 on:
   pull_request:
   push:
     branches: [main]
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -23,11 +26,41 @@ permissions:
 
 concurrency:
   group: build-${{ github.ref }}
-  cancel-in-progress: true
+  # a run on main may be releasing: let it finish
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      # X.Y.Z when this run releases (main, VERSION not yet tagged), else empty
+      release: ${{ steps.v.outputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: VERSION, its tag and its CHANGELOG section
+        id: v
+        run: |
+          ver=$(tr -d ' \r\n' < VERSION)
+          echo "$ver" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::VERSION is '$ver', not X.Y.Z"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/v$ver" >/dev/null; then
+            echo "v$ver is released: nothing to release"
+            exit 0
+          fi
+          # a new version: it needs its notes (checked on pull requests too, before it's merged)
+          awk -v v="$ver" '$0 == "## " v {f = 1; next} /^## / {f = 0} f' CHANGELOG.md | grep -q . ||
+            { echo "::error::CHANGELOG.md has no '## $ver' section"; exit 1; }
+          if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            echo "releasing $ver"
+            echo "release=$ver" >> "$GITHUB_OUTPUT"
+          else
+            echo "$ver will be released when this is on main"
+          fi
+
   web:
     name: Tests and the web app
+    needs: version
     runs-on: ubuntu-latest
     # the Emscripten version the web app is built and tested with locally
     container: emscripten/emsdk:6.0.10
@@ -41,8 +74,10 @@ jobs:
         run: sh tests/run_tests.sh
 
       - name: Build the web app
+        env:
+          RELEASE: ${{ needs.version.outputs.release }}
         run: |
-          case "$GITHUB_REF" in refs/tags/v*) export OM_VERSION="${GITHUB_REF_NAME#v}" ;; esac
+          [ -n "$RELEASE" ] && export OM_VERSION="$RELEASE"
           sh web/emu/build.sh
           mkdir -p site
           cp build/emu/FiMba-1.html site/index.html
@@ -71,6 +106,7 @@ jobs:
 
   firmware:
     name: Firmware package
+    needs: version
     runs-on: ubuntu-latest
     env:
       AC79_SDK: ${{ github.workspace }}/../sdk
@@ -95,11 +131,10 @@ jobs:
         run: sh tools/get_sdk.sh "$AC79_SDK"
 
       - name: Build the firmware package
+        env:
+          RELEASE: ${{ needs.version.outputs.release }}
         run: |
-          case "$GITHUB_REF" in
-            refs/tags/v*) python3 tools/build.py --release "${GITHUB_REF_NAME#v}" ;;
-            *)            python3 tools/build.py ;;
-          esac
+          if [ -n "$RELEASE" ]; then python3 tools/build.py --release "$RELEASE"; else python3 tools/build.py; fi
           ls -l build/*.fwsc
 
       - name: Build FoMni's package, to compare with
@@ -129,12 +164,15 @@ jobs:
 
   pages:
     name: Publish the web app (and its installer's firmware) to GitHub Pages
-    # main: the latest release's firmware goes beside the page. A tag: that release's, once it's out.
-    if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && needs.web.result == 'success' && needs.release.result != 'failure'
-    needs: [web, release]
+    # main: the latest release's firmware goes beside the page; on a release, this run's, once it's out
+    # (a release that failed publishes nothing: its rerun will)
+    if: >-
+      always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      needs.web.result == 'success' &&
+      (needs.release.result == 'success' || (needs.version.outputs.release == '' && needs.release.result == 'skipped'))
+    needs: [version, web, release]
     runs-on: ubuntu-latest
-    # one publish at a time, whole: a main push and a tag pushed together once raced, the main run
-    # choosing its firmware before the tag's release existed and publishing after it
+    # one publish at a time, whole
     concurrency:
       group: pages-publish
       cancel-in-progress: false
@@ -186,8 +224,8 @@ jobs:
 
   release:
     name: GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [web, firmware]
+    if: needs.version.outputs.release != ''
+    needs: [version, web, firmware]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -198,11 +236,13 @@ jobs:
         with:
           path: dist
 
-      - name: Create the release
+      - name: Tag this commit and create the release
         env:
           GH_TOKEN: ${{ github.token }}
+          VER: ${{ needs.version.outputs.release }}
         run: |
-          ver="${GITHUB_REF_NAME#v}"
-          sed "s/VERSION/$ver/g" .github/release-notes.md > notes.md
-          gh release create "$GITHUB_REF_NAME" --title "FiMba-1 $ver (beta)" --notes-file notes.md --prerelease \
-            dist/fimba-firmware/fimba-"$ver".fwsc dist/FiMba-1-web/FiMba-1.html
+          { echo "### What's new in $VER"; echo
+            awk -v v="$VER" '$0 == "## " v {f = 1; next} /^## / {f = 0} f' CHANGELOG.md | sed '/./,$!d'
+            echo; sed "s/VERSION/$VER/g" .github/release-notes.md; } > notes.md
+          gh release create "v$VER" --target "$GITHUB_SHA" --title "FiMba-1 $VER (beta)" --notes-file notes.md \
+            --prerelease dist/fimba-firmware/fimba-"$VER".fwsc dist/FiMba-1-web/FiMba-1.html

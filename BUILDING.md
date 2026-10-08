@@ -145,5 +145,7 @@ Before the first install, get the way back ready:
 
 ## Publishing a release
 
-1. `./build.sh --release X.Y` (the identity, FM-1_8XXYYZZ, is what the installer checks).
-2. `gh release create vX.Y build/fimba-X.Y.fwsc`.
+CI releases: set `VERSION` to the new X.Y.Z, add its `## X.Y.Z` section to `CHANGELOG.md`, and
+merge to `main`. That run builds the release (the identity, FM-1_8XXYYZZ, is what the installer
+checks), tags the commit and publishes the GitHub Release and the site. `./build.sh --release X.Y.Z`
+makes the same release build locally.

@@ -563,13 +563,11 @@ When each part runs:
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A pull request                           | Both jobs; the firmware (`fimba-firmware`) and the one-file web app (`FiMba-1-web`) can be downloaded from the run to try before merging                                                                                                                                    |
 | A push to `main` (a merged pull request) | Both jobs, then the browser version is published to GitHub Pages, with the latest release's firmware beside it for the page's installer                                                                                                                                     |
-| A tag `vX.Y.Z`                           | A release build: the version shows on the splash screen, and the package identity is FM-1_8XXYYZZ. It's published as a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with `fimba-X.Y.Z.fwsc` and `FiMba-1.html`, and the site's installer moves to it |
+| A push to `main` with a new `VERSION`    | A release, in the same run: a release build (the version shows on the splash screen and the Setup page, and the package identity is FM-1_8XXYYZZ), the commit tagged `vX.Y.Z`, a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with `fimba-X.Y.Z.fwsc`, `FiMba-1.html` and the notes from `CHANGELOG.md`, and the site's installer moved to it |
 
-To make a release:
-
-```shell
-git tag v0.2.0 && git push origin v0.2.0
-```
+To make a release, put the new version in `VERSION` and its notes under a `## X.Y.Z` heading in
+`CHANGELOG.md`, in the pull request (its checks fail if the notes are missing), and merge it. Don't
+push tags by hand.
 
 ---
 
