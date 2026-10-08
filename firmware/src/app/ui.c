@@ -37,7 +37,7 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_LAYOUT, P_SCALE, P_KEY, P_BLACK},
     {P_STRUM, P_OCTAVE, K_NONE, K_NONE},
     {P_PATTERN, P_PTEMPO, K_NONE, K_NONE},
-    {P_TUNE, P_MIDICH, P_MIDIOUT, K_NONE},
+    {P_TUNE, P_MIDICH, P_MIDIOUT, P_THEME},
 };
 #define ARP_HOLD_MS 500u               /* ARP held this long: the Pattern page (a tap: the pattern on / off) */
 
@@ -55,21 +55,38 @@ static const uint8_t BLACK_LEFT[NBLACK] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
 enum { PF_MUTE, PF_HOLE, PF_FREEZE, PF_OCTDN, PF_OCTUP, PF_MAT0 };
 static const char *const PF_NAME[NBLACK] = {"Mut", "Hol", "Frz", "O-", "O+", "St", "Br", "Bz", "Al", "Bm", "Gl"};
 
-/* the screen's colours: a kalimba's: pale wood, dark ink, the tines in their metal */
-#define K_BG RGB(246, 238, 224)
-#define K_PANEL RGB(232, 220, 200)
-#define K_LINE RGB(212, 196, 172)
-#define K_DIM RGB(150, 132, 110)
-#define K_TEXT RGB(64, 48, 36)
-#define K_WHITE RGB(255, 255, 255)
-#define K_WOOD RGB(196, 142, 92)
-#define K_WOOD_D RGB(150, 100, 60)
-#define K_HOLE RGB(70, 44, 26)
-#define K_BRIDGE RGB(92, 66, 46)
-#define K_ACC RGB(226, 104, 60)
-#define K_ACC_T RGB(246, 204, 180)
-#define K_BLUE RGB(52, 140, 160)
-#define K_BLUE_T RGB(194, 226, 230)
+/* the screen's colours (Setup: Theme). Light: a kalimba's, pale wood, dark ink. Dark: near-black, cream
+ * and amber, and one accent: the bars and chips go cream and brown, so amber only means sounding or
+ * touched. In both the tines keep their metal, and the ink on them stays dark. */
+typedef struct {
+    uint16_t bg, panel, line, dim, text, white, wood, wood_d, hole, bridge, acc, acc_t, blue, blue_t, ink, gourd;
+} theme_t;
+static const theme_t THEMES[THEME_N] = {
+    {RGB(246, 238, 224), RGB(232, 220, 200), RGB(212, 196, 172), RGB(150, 132, 110), RGB(64, 48, 36),
+     RGB(255, 255, 255), RGB(196, 142, 92), RGB(150, 100, 60), RGB(70, 44, 26), RGB(92, 66, 46),
+     RGB(226, 104, 60), RGB(246, 204, 180), RGB(52, 140, 160), RGB(194, 226, 230), RGB(64, 48, 36),
+     RGB(176, 120, 64)},
+    {RGB(28, 22, 16), RGB(40, 32, 24), RGB(78, 63, 48), RGB(154, 138, 116), RGB(230, 211, 179),
+     RGB(28, 22, 16), RGB(58, 42, 30), RGB(40, 29, 21), RGB(16, 12, 9), RGB(118, 98, 76),
+     RGB(217, 119, 47), RGB(86, 48, 22), RGB(230, 211, 179), RGB(48, 39, 30), RGB(28, 22, 16),
+     RGB(70, 48, 30)},
+};
+#define THEME (&THEMES[(unsigned)proj.par[P_THEME] < THEME_N ? proj.par[P_THEME] : 0])
+#define K_BG (THEME->bg)
+#define K_PANEL (THEME->panel)
+#define K_LINE (THEME->line)
+#define K_DIM (THEME->dim)
+#define K_TEXT (THEME->text)
+#define K_WHITE (THEME->white)                 /* text on the accent */
+#define K_WOOD (THEME->wood)
+#define K_WOOD_D (THEME->wood_d)
+#define K_HOLE (THEME->hole)
+#define K_BRIDGE (THEME->bridge)
+#define K_ACC (THEME->acc)
+#define K_ACC_T (THEME->acc_t)
+#define K_BLUE (THEME->blue)
+#define K_BLUE_T (THEME->blue_t)
+#define K_INK (THEME->ink)                     /* on the tines */
 static const uint16_t MAT_COL[MAT_N] = {RGB(196, 204, 214), RGB(226, 186, 92), RGB(204, 128, 82), RGB(226, 230, 236),
                                         RGB(232, 210, 150), RGB(186, 232, 240)};
 
@@ -602,6 +619,7 @@ static void draw_header(void)
     char t[24];
     int msg = plat_ms() < ui.msg_until;
     uint32_t h = hash(hash(2166136261u, ui.view | (uint32_t)ui.frozen << 8 | (uint32_t)proj.par[P_RELEASE] << 9 |
+                                            (uint32_t)proj.par[P_THEME] << 14 |
                                             (uint32_t)ui.pat_on << 12 | (uint32_t)(ui.pat_on && km_pat_pulse % 3u == 0u) << 13 |
                                             (uint32_t)ui.dirty << 10 | (uint32_t)msg << 11),
                       (uint32_t)proj.par[P_KEY] | (uint32_t)proj.par[P_SCALE] << 4 | (uint32_t)proj.par[P_MATERIAL] << 12 |
@@ -632,7 +650,13 @@ static void draw_header(void)
             }
             cv_text(x - text_w(&FONT_S, t), 6, &FONT_S, t, K_DIM);
             x -= text_w(&FONT_S, t) + 6;
-            cv_text(x - text_w(&FONT_S, "CPU"), 6, &FONT_S, "CPU", K_DIM);
+            x -= text_w(&FONT_S, "CPU");
+            cv_text(x, 6, &FONT_S, "CPU", K_DIM);
+            for (w = 0; OM_VERSION[w] && OM_VERSION[w] != ' ' && w < 15; w++)   /* the version: "0.4.1", "DEV" */
+                t[w] = OM_VERSION[w];
+            t[w] = 0;
+            x -= text_w(&FONT_S, t) + 12;
+            cv_text(x, 6, &FONT_S, t, K_DIM);
         } else if (keyboard()) {                     /* "Keyboard", "Keyboard +2" */
             s_cpy(t, "Keyboard");
             if (proj.par[P_TRANSPOSE]) {
@@ -721,7 +745,7 @@ static void draw_kalimba(void)
     if (keyboard() && key_cents(0) < cmin)
         cmin = key_cents(0);
     if (body != BODY_NONE)
-        cv_round(2, y0 - 6, 236, 104, 6, body == BODY_GOURD ? RGB(176, 120, 64) : K_WOOD);
+        cv_round(2, y0 - 6, 236, 104, 6, body == BODY_GOURD ? THEME->gourd : K_WOOD);
     if (body == BODY_BOX || body == BODY_GOURD) {
         int32_t r = 6 + (int32_t)(km_hole_open * 12.0f);
         cv_disc(120, 82, r + 2, K_WOOD_D);
@@ -744,13 +768,13 @@ static void draw_kalimba(void)
         {   /* room for one letter: an accidental is in its colour */
             const char *nm = KM_NOTE_NAME[((c + 50) / 100) % 12];
             char n[2] = {nm[0], 0};
-            text_c(tx + 5, y0 + bridge + h - 14, &FONT_XS, n, nm[1] ? K_ACC : K_TEXT);
+            text_c(tx + 5, y0 + bridge + h - 14, &FONT_XS, n, nm[1] ? K_ACC : K_INK);
         }
         if (((c - 100 * (keyboard() ? 0 : proj.par[P_KEY])) % 1200 + 1200) % 1200 == 0)
-            cv_round(tx + 3, y0 + bridge + 6, 4, 4, 2, K_TEXT);   /* the tonic (Keyboard: the Cs), engraved */
+            cv_round(tx + 3, y0 + bridge + 6, 4, 4, 2, K_INK);   /* the tonic (Keyboard: the Cs), engraved */
     }
     if (keyboard()) {   /* the black keys' tines: a second, narrower row in the gaps, as a chromatic kalimba */
-        uint16_t dark = mix(metal, K_TEXT, 6);
+        uint16_t dark = mix(metal, K_INK, 6);
         int b;
         for (b = 0; b < NBLACK; b++) {
             int c = key_cents(BLACK_K[b]), yy;
@@ -810,7 +834,8 @@ static void draw_main(void)
     uint32_t h = hash(2166136261u, (uint32_t)proj.par[P_LAYOUT] | (uint32_t)proj.par[P_SCALE] << 4 |
                                        (uint32_t)proj.par[P_KEY] << 8 | (uint32_t)(octave_now() + 4) << 12 |
                                        (uint32_t)proj.par[P_BLACK] << 16 | (uint32_t)proj.par[P_MATERIAL] << 20 |
-                                       (uint32_t)proj.par[P_BODY] << 24 | (uint32_t)ui.frozen << 28) ^
+                                       (uint32_t)proj.par[P_BODY] << 24 | (uint32_t)ui.frozen << 28 |
+                                       (uint32_t)proj.par[P_THEME] << 30) ^
                  (uint32_t)(proj.par[P_TRANSPOSE] + 12) * 2654435761u;
     int v;
     int ringing = 0;
@@ -832,7 +857,7 @@ static void draw_main(void)
 
 static void draw_knobs(void)
 {
-    uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8), i;
+    uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8 | (uint32_t)proj.par[P_THEME] << 16), i;
     int now_touch = plat_ms() < ui.touch_until;
     for (i = 0; i < 4; i++)
         h = hash(h, view_knob((int)i) == K_NONE ? 0xFFFFu : (uint32_t)proj.par[view_knob((int)i)] | (uint32_t)view_knob((int)i) << 16);
@@ -849,19 +874,6 @@ static void draw_knobs(void)
         char t[16];
         if (i)
             cv_rect(x, 14, 1, KNB_H - 30, K_LINE);
-        if (k == K_NONE && ui.view == V_SETUP && i == 3) {  /* the version, "0.4.1" over "BETA" (or "DEV") */
-            int n = 0;
-            while (OM_VERSION[n] && OM_VERSION[n] != ' ' && n < 15) {
-                t[n] = OM_VERSION[n];
-                n++;
-            }
-            t[n] = 0;
-            text_c(cx, 6, &FONT_XS, "Version", K_DIM);
-            text_c(cx, text_w(&FONT_M, t) > 56 ? 26 : 22, text_w(&FONT_M, t) > 56 ? &FONT_B : &FONT_M, t, K_TEXT);
-            if (OM_VERSION[n])
-                text_c(cx, 48, &FONT_XS, OM_VERSION + n + 1, K_DIM);
-            continue;
-        }
         if (k == K_NONE)
             continue;
         lo = km_param_info(k)->lo;
