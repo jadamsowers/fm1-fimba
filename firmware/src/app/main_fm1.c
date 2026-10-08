@@ -231,12 +231,14 @@ static void safe_main(void)
 static void splash(void)
 {
     lcd_fill(0, 0, 240, 240, RGB(250, 244, 232));
-    cv_begin(240, 64, RGB(250, 244, 232));
+    cv_begin(240, 84, RGB(250, 244, 232));
     {
         int32_t w = text_w(&FONT_L, "FiMba-1");
         cv_text((240 - w) / 2, 0, &FONT_L, "FiMba-1", RGB(196, 142, 92));
         w = text_w(&FONT_S, "A thumb piano for the FM-1");
         cv_text((240 - w) / 2, 42, &FONT_S, "A thumb piano for the FM-1", RGB(150, 132, 110));
+        w = text_w(&FONT_XS, OM_VERSION);              /* "DEV", or a release's "0.1.0 BETA" */
+        cv_text((240 - w) / 2, 66, &FONT_XS, OM_VERSION, RGB(170, 152, 130));
     }
     cv_blit(0, 92);
     lcd_sync();

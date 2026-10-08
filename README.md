@@ -474,6 +474,8 @@ python3 tools/fm1_install.py --info    # check the installer finds your FM-1 (wr
 python3 tools/fm1_install.py build/fimba.fwsc
 ```
 
+Or download a ready-built package from the [releases](https://github.com/jadamsowers/fm1-fimba/releases).
+
 - **The host simulator** (`build/host/kalimba_host SCRIPT OUTDIR`) runs the whole firmware on a
   computer from a script (`tests/scenarios/*.kal`): screenshots, audio and the MIDI it sends come
   out. The screenshots in this README are its output.
@@ -499,17 +501,33 @@ python3 tools/fm1_install.py build/fimba.fwsc
   V15, "PC Firmware" at m-vave.com/download). `tools/fm1_rescue.py` puts it back if the FM-1 ever
   ends up in a crash loop, and FoMni's web installer can also restore it.
 
-### Continuous integration
+### Continuous integration and releases
 
-`.github/workflows/web.yml` runs in the official Emscripten container:
+`.github/workflows/web.yml` has two build jobs:
 
-- **On every pull request:** the full test suite, then a build of the browser version, which is
-  kept as a downloadable artifact so you can try it before merging.
-- **On every push to `main`** (a merged pull request): the same, then the site is published to
-  GitHub Pages.
+- **Tests and the web app**, in the official Emscripten container: the full test suite, then the
+  browser version.
+- **Firmware package**, on Linux:
+  - It fetches JieLi's toolchain (`tools/get_toolchain.sh`) and the three SDK files
+    (`tools/get_sdk.sh`, SHA-256 checked).
+  - It builds `fimba.fwsc`.
+  - It builds FoMni's own package at a pinned commit and checks that everything but the app is
+    byte-identical (`tools/check_fwsc.py`).
+  - It runs the update-loader, OTA-entry and installer tests against the package.
 
-The firmware package itself is built locally (`./build.sh`), since its toolchain is Linux x86-64
-only and comes from JieLi.
+When each part runs:
+
+| When | What happens |
+|---|---|
+| A pull request | Both jobs; the firmware (`fimba-firmware`) and the one-file web app (`FiMba-1-web`) can be downloaded from the run to try before merging |
+| A push to `main` (a merged pull request) | Both jobs, then the browser version is published to GitHub Pages |
+| A tag `vX.Y.Z` | A release build: the version shows on the splash screen, and the package identity is FM-1_8XXYYZZ. It's published as a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with `fimba-X.Y.Z.fwsc` and `FiMba-1.html`. |
+
+To make a release:
+
+```
+git tag v0.2.0 && git push origin v0.2.0
+```
 
 ---
 

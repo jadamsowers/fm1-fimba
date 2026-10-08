@@ -42,8 +42,9 @@ The build makes three files in `build/`:
       https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
   ```
 
-  If gitee.com is blocked too, the three files are in a GitHub mirror of the same tag; the build
-  checks each one's SHA-256, so a wrong file fails the build rather than reaching the package:
+  If gitee.com is blocked too, the three files are in a GitHub mirror of the same tag. The build
+  compares each one's SHA-256 with the known file and warns if one differs (the GitHub Action
+  refuses outright); check them yourself with `shasum -a 256` against `SDK_SHA256` in `tools/build.py`:
 
   ```
   T=AC79NN_SDK_V1.2.1_2023-12-13; D=~/fw-AC79_AIoT_SDK/cpu/wl82/tools; mkdir -p $D/cfg

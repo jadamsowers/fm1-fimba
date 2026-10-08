@@ -1,31 +1,33 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Test FiMba-1 and publish the browser version to GitHub Pages.
+# Test FiMba-1, build the firmware and the browser version, publish them.
 #
-#   pull request   the full test suite, then the browser version built (downloadable from the run as
-#                  "FiMba-1-web": a single FiMba-1.html that opens from disk)
-#   push to main   the same, then published to https://jadamsowers.github.io/fm1-fimba/
-#
-# It runs in the official Emscripten container, the version the web app is built and tested with
-# locally. (The firmware package itself, build/fimba.fwsc, needs JieLi's toolchain: see BUILDING.md.)
-name: Test and publish the web app
+#   pull request      the full test suite; the firmware package built and checked; both kept with the
+#                     run as downloads ("fimba-firmware", "FiMba-1-web")
+#   push to main      the same, then the browser version published to
+#                     https://jadamsowers.github.io/fm1-fimba/
+#   tag vX.Y[.Z]      the same, with a release build (identity FM-1_8XXYYZZ, version on the splash),
+#                     published as a GitHub Release with the .fwsc and the one-file web app
+name: Test, build and publish
 
 on:
   pull_request:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: web-${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Test and build
+  web:
+    name: Tests and the web app
     runs-on: ubuntu-latest
+    # the Emscripten version the web app is built and tested with locally
     container: emscripten/emsdk:6.0.10
     steps:
       - uses: actions/checkout@v7
@@ -38,12 +40,13 @@ jobs:
 
       - name: Build the web app
         run: |
+          case "$GITHUB_REF" in refs/tags/v*) export OM_VERSION="${GITHUB_REF_NAME#v}" ;; esac
           sh web/emu/build.sh
           mkdir -p site
           cp build/emu/FiMba-1.html site/index.html
           touch site/.nojekyll
 
-      - name: Keep the web app with the run (to try a pull request before merging)
+      - name: Keep the web app with the run
         uses: actions/upload-artifact@v7
         with:
           name: FiMba-1-web
@@ -58,15 +61,73 @@ jobs:
           if-no-files-found: ignore
 
       - name: Package the site for Pages
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
+  firmware:
+    name: Firmware package
+    runs-on: ubuntu-latest
+    env:
+      AC79_SDK: ${{ github.workspace }}/../sdk
+      JIELI_TOOLCHAIN: ${{ github.workspace }}/../jieli/toolchain
+      JIELI_DOCKER: '1'          # the toolchain runs in a Debian container, as on a Mac
+      # the FoMni commit the package is compared with (its update loader and boot head must match)
+      FOMNI_REF: 378dfacbf476c8d7c181eed83c58c019667133d6
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Python packages
+        run: python3 -m pip install --quiet -r requirements.txt
+
+      - name: JieLi toolchain (JieLi's server, else the same package from a Docker image)
+        run: sh tools/get_toolchain.sh "$(dirname "$JIELI_TOOLCHAIN")"
+
+      - name: AC79 SDK files (three, SHA-256 checked)
+        run: sh tools/get_sdk.sh "$AC79_SDK"
+
+      - name: Build the firmware package
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*) python3 tools/build.py --release "${GITHUB_REF_NAME#v}" ;;
+            *)            python3 tools/build.py ;;
+          esac
+          ls -l build/*.fwsc
+
+      - name: Build FoMni's package, to compare with
+        run: |
+          git clone --quiet https://github.com/charlesvestal/fm1-fomni build/fomni-ref
+          git -C build/fomni-ref checkout --quiet "$FOMNI_REF"
+          cp tools/gen_font.py build/fomni-ref/tools/      # (the font only changes the app; works without raqm)
+          (cd build/fomni-ref && python3 tools/build.py)
+
+      - name: Check the package (every CRC; all but the app byte-identical to FoMni's)
+        run: |
+          pkg=$(ls build/fimba*.fwsc | head -1)
+          python3 tools/check_fwsc.py "$pkg" --app build/fimba.bin --ref build/fomni-ref/build/omni.fwsc
+
+      - name: Update-path and install tests against the package
+        run: |
+          [ -f build/fimba.fwsc ] || cp build/fimba-*.fwsc build/fimba.fwsc   # (the tests look for this name)
+          sh tests/run_tests.sh
+
+      - name: Keep the package with the run
+        uses: actions/upload-artifact@v7
+        with:
+          name: fimba-firmware
+          path: |
+            build/fimba*.fwsc
+            build/fimba.bin
+
   deploy:
-    name: Publish to GitHub Pages
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: build
+    name: Publish the web app to GitHub Pages
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: web                   # (not the firmware: the site doesn't wait on JieLi's toolchain sources)
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -78,3 +139,26 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [web, firmware]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          sed "s/VERSION/$ver/g" .github/release-notes.md > notes.md
+          gh release create "$GITHUB_REF_NAME" --title "FiMba-1 $ver (beta)" --notes-file notes.md --prerelease \
+            dist/fimba-firmware/fimba-"$ver".fwsc dist/FiMba-1-web/FiMba-1.html
