@@ -29,6 +29,9 @@
  *   oldproject                   put a format 1 project (Material 2) in the simulated flash
  */
 #define OM_HOST 1
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L          /* clock_gettime under -std=c99 (glibc hides it otherwise) */
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
