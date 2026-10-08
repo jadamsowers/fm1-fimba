@@ -4,6 +4,16 @@ A release is a push to `main` that changes `VERSION` to a version with no tag ye
 release build, tags the commit `vX.Y.Z` and publishes the GitHub Release with that version's notes,
 taken from its section below. Add the section in the same pull request as the `VERSION` change.
 
+## 0.5.1
+
+- **The wah is now heard.** Covering the sound hole (ENV → Body: Wah, the mod wheel, pressure, the Hole
+  key, or Wah rate) muffles the sound like a vowel closing: bright with the hole open, dark and a little
+  quieter covered, with a vowel-like peak sweeping through the tines on the way. Before, it only moved a
+  resonance below the lowest tine, and barely changed the sound. Box and Gourd have a hole; Board and
+  None don't.
+- The hand glides over the hole in about 20 ms, so the Hole key covers and uncovers it without a click.
+- **Wah rate**'s lowest setting reads **Off** (it was "Hand"): the hole moves only when you move it.
+
 ## 0.5.0
 
 - **Theme**, a new knob on the Setup page (GLO, KNOB 4): **Light**, the pale wood and dark ink as

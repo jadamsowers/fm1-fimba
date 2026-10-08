@@ -384,7 +384,7 @@ static void test_body(void)
     render(0, 256);
     open_lvl = km_hole_open;
     km_hole(HOLE_MIDI, 127);
-    render(0, 256);
+    render(0, 8820);                             /* (the hand glides there in ~20 ms) */
     CHECK(open_lvl > 0.99f && km_hole_open < 0.15f, "the hole: %.2f open, %.2f covered", (double)open_lvl, (double)km_hole_open);
     km_hole(HOLE_MIDI, 0);
     km_set(P_WAHRATE, 60);
@@ -499,6 +499,76 @@ static void test_bodies(void)
           (double)b[BODY_BOX], (double)b[BODY_GOURD]);
     CHECK(lo[BODY_GOURD] > lo[BODY_BOARD] + 3.0f && lo[BODY_BOX] > lo[BODY_BOARD] + 3.0f,
           "low end: board %.1f, box %.1f, gourd %.1f dB", (double)lo[BODY_BOARD], (double)lo[BODY_BOX], (double)lo[BODY_GOURD]);
+}
+
+/* the wah is heard, not only drawn: a chord through the Box with the hole open, then half covered, then
+ * covered (Wah 100), darker each time (the top overtones down by far: half covered, the vowel's peak is
+ * among the lower ones) and a little quieter, not louder. It
+ * once moved only the air mode, below the tines (210 Hz down to 66), and changed the sound by ~1 dB.
+ * And a hand landing on the hole at once (the Hole key) doesn't click. */
+static float brightness(uint32_t a, uint32_t n)   /* the energy 2.5-5 kHz against 80 Hz-1.2 kHz, in dB */
+{
+    float hi = 0.0f, lo = 0.0f, f;
+    for (f = 80.0f; f < 5000.0f; f += 20.0f) {
+        float m = mag(a, n, f);
+        if (f < 1200.0f)
+            lo += m * m;
+        else if (f >= 2500.0f)
+            hi += m * m;
+    }
+    return 3.0103f * fm_log2f(hi / (lo + 1e-20f) + 1e-20f);
+}
+static void wah_chord(int body, int wah, float *lvl, float *bright)
+{
+    static const int CH[4] = {6000, 6400, 6700, 7200};
+    int i;
+    fresh();
+    km_set(P_BODY, body);
+    km_set(P_WAH, wah);
+    render(0, 4410);                             /* the hand settles */
+    for (i = 0; i < 4; i++)
+        km_pluck(CH[i], 100, 0, 0);
+    render(0, 22050);
+    *lvl = 6.0206f * fm_log2f(rms(bufl, 0, 22050) + 1e-9f);
+    *bright = brightness(0, 8192);
+}
+static void test_wah(void)
+{
+    static const int B[2] = {BODY_BOX, BODY_GOURD};
+    int k;
+    for (k = 0; k < 2; k++) {
+        float l0, b0, l50, b50, l100, b100;
+        wah_chord(B[k], 0, &l0, &b0);
+        wah_chord(B[k], 50, &l50, &b50);
+        wah_chord(B[k], 100, &l100, &b100);
+        CHECK(b100 < b0 - 15.0f && b50 < b0 - 3.0f && b100 < b50 - 6.0f,
+              "body %d: the wah darkens (highs against lows): %.1f dB open, %.1f half, %.1f covered", B[k], (double)b0,
+              (double)b50, (double)b100);
+        CHECK(l100 - l0 < 0.5f && l100 - l0 > -6.0f && l50 - l0 < 0.5f,
+              "body %d: covered a little quieter, not louder: %+.1f dB half, %+.1f dB covered", B[k], (double)(l50 - l0),
+              (double)(l100 - l0));
+    }
+    {   /* the Hole key mid-note: on and off, no sharper an edge than the tine itself */
+        float alone, on, off, settled;
+        master = 4096 / 16;
+        fresh();
+        km_set(P_BODY, BODY_BOX);
+        km_set(P_DECAY, 100);
+        km_pluck(6000, 110, 0, 0);
+        render(0, 22050);
+        alone = edge_max(11025, 11025);
+        km_hole(HOLE_KEY, 127);
+        render(0, 22050);
+        on = edge_max(0, 4410);
+        settled = edge_max(11025, 11025);
+        km_hole(HOLE_KEY, 0);
+        render(0, 22050);
+        off = edge_max(0, 4410);
+        master = 4096 / 2;
+        CHECK(fm_maxf(on, off) < fm_maxf(alone, settled) * 3.0f + 2e-6f,
+              "the Hole key mid-note: edge %.6f / %.6f, settled %.6f, the tine alone %.6f", (double)on, (double)off,
+              (double)settled, (double)alone);
+    }
 }
 
 /* What a pluck adds to what was already sounding: the session rendered twice, with and without it
@@ -868,6 +938,7 @@ int main(int argc, char **argv)
     test_grains();
     test_body();
     test_bodies();
+    test_wah();
     test_no_pops();
     test_glide_just();
     test_worn();

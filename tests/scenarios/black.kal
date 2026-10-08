@@ -61,12 +61,12 @@ expect tine6000 >5
 tapkey b0
 wait 400
 expect tine6000 <2
-# Hole: held covers the sound hole
+# Hole: held covers the sound hole (the hand glides on and off in ~20 ms: settled by 150)
 key b1 down
-wait 30
+wait 150
 expect hole <15
 key b1 up
-wait 30
+wait 150
 expect hole 100
 # Freeze toggles
 tapkey b2
