@@ -588,8 +588,9 @@ static const body_t BODIES[BODY_N] = {
 };
 static svf_t bf[4], muf_l, muf_r;
 static float hole_amt[HOLE_N], wah_ph, wah_inc;
-static float cover_now, cover_to, muf_g = 1.0f, muf_gain = 1.0f;  /* the hand over the hole: where it is, where it
-                                                                   * goes; the level it leaves (target, now) */
+/* the hand over the hole: the Wah knob's and the other hands' (mod wheel, pressure, the Hole key) cover,
+ * each where it is and where it glides to; the cover the hole has now; the level it leaves (target, now) */
+static float knob_now, knob_to, hold_now, hold_to, cover_now, muf_g = 1.0f, muf_gain = 1.0f;
 static float tone_lo_a, tone_hi_a, tlo_l, tlo_r, thi_l, thi_r, knock_g, body_out = 1.0f;
 
 static float onepole(float hz) { return hz > 0.0f ? 1.0f - fm_expf(-FM_TWO_PI * hz / KM_SR) : 1.0f; }
@@ -603,18 +604,26 @@ static void svf_set(svf_t *f, float hz, float qq, float gain)
     f->gain = gain * k;                                 /* the band-pass peaks at 1/k: level by gain */
 }
 
-/* how much of the hole is covered: the Wah knob, the hand sources, the LFO (render_body glides to it) */
+/* where the hands go (render_body glides them there) */
 static void cover_target(void)
 {
-    float cover = (float)par[P_WAH] * 0.01f, lfo;
+    float h = 0.0f;
     int i;
     for (i = 0; i < HOLE_N; i++)
-        cover += hole_amt[i];
-    if (par[P_WAHRATE]) {                               /* a hand fluttering over the hole, in time */
-        lfo = 0.5f - 0.5f * fm_cosf(wah_ph * FM_TWO_PI);
-        cover = cover + lfo * (1.0f - cover);
-    }
-    cover_to = fm_clampf(cover, 0.0f, 1.0f);
+        h += hole_amt[i];
+    knob_to = (float)par[P_WAH] * 0.01f;
+    hold_to = fm_clampf(h, 0.0f, 1.0f);
+}
+
+/* how much of the hole is covered now. Wah is how much wah: with Wah rate Off, how far the hand covers
+ * the hole; with a rate, how far the fluttering hand goes, from open to there and back (Wah 100: the
+ * whole way). The other hands add to it. */
+static float cover_now_of(void)
+{
+    float k = knob_now;
+    if (wah_inc > 0.0f)
+        k *= 0.5f - 0.5f * fm_cosf(wah_ph * FM_TWO_PI);
+    return fm_clampf(hold_now + k, 0.0f, 1.0f);
 }
 
 /* The hole, covered by cover_now. Two things a hand over it does: the air mode drops (Helmholtz: f ~
@@ -652,6 +661,7 @@ static void body_coefs(void)
             svf_set(&bf[i], bd->m[i][0], bd->m[i][1], bd->m[i][2]);
     }
     cover_target();
+    cover_now = cover_now_of();
     hole_coefs();
     tone_lo_a = bd->lo_cut > 0.0f ? onepole(bd->lo_cut) : 0.0f;
     tone_hi_a = onepole(bd->hi_cut);
@@ -1246,7 +1256,7 @@ static void quiet(void)
     for (i = 0; i < 4; i++)
         bf[i].s1 = bf[i].s2 = 0.0f;
     muf_l.s1 = muf_l.s2 = muf_r.s1 = muf_r.s2 = 0.0f;
-    cover_now = cover_to = 0.0f;
+    knob_now = knob_to = hold_now = hold_to = cover_now = 0.0f;
     muf_g = 0.0f;                                       /* (body_coefs, below, sets the level directly) */
     tlo_l = tlo_r = thi_l = thi_r = 0.0f;
     d_lp = d_cur_l = d_cur_r = d_prev_l = d_prev_r = 0.0f;
@@ -1537,25 +1547,26 @@ static void render_body(uint32_t n)
     int i;
     if (par[P_BODY] == BODY_NONE && buzz_amt <= 0.0f)
         return;
-    if (wah_inc > 0.0f) {
-        wah_ph += wah_inc * (float)n;
-        if (wah_ph >= 1.0f)
-            wah_ph -= 1.0f;
-        cover_target();
-    }
     if (par[P_BODY] != BODY_NONE) {
         const float la = tone_lo_a, ha = tone_hi_a, kg = knock_g * 6.0f, out = body_out;
         uint32_t j0, j1;
-        /* in steps of 8 samples, the hand gliding to where it goes in ~20 ms (the cut-off ~5% a step), the
-         * level ramped sample by sample: a hand landing on the hole at once (the Hole key) doesn't click */
+        /* in steps of 8 samples: the hands glide to where they go in ~20 ms (the cut-off ~5% a step), the
+         * flutter (Wah rate) moves on, the level is ramped sample by sample. A hand landing on the hole at
+         * once (the Hole key) doesn't click; a fast flutter isn't smoothed away. */
         for (j0 = 0; j0 < n; j0 = j1) {
-            float g, dg;
+            float g, dg, c;
             j1 = j0 + 8u < n ? j0 + 8u : n;
-            if (fm_fabsf(cover_to - cover_now) > 0.0002f) {
-                cover_now += (cover_to - cover_now) * 0.009f;
-                hole_coefs();
-            } else if (cover_now != cover_to) {
-                cover_now = cover_to;
+            knob_now = fm_fabsf(knob_to - knob_now) > 0.0002f ? knob_now + (knob_to - knob_now) * 0.009f : knob_to;
+            hold_now = fm_fabsf(hold_to - hold_now) > 0.0002f ? hold_now + (hold_to - hold_now) * 0.009f : hold_to;
+            if (wah_inc > 0.0f) {
+                wah_ph += wah_inc * (float)(j1 - j0);
+                if (wah_ph >= 1.0f)
+                    wah_ph -= 1.0f;
+            }
+            c = cover_now_of();                         /* (~5 ms more: Wah rate switched on or off mid-flutter) */
+            c = fm_fabsf(c - cover_now) > 0.0002f ? cover_now + (c - cover_now) * 0.035f : c;
+            if (c != cover_now) {
+                cover_now = c;
                 hole_coefs();
             }
             g = muf_gain;
