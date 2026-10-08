@@ -133,6 +133,11 @@ jobs:
     if: always() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && needs.web.result == 'success' && needs.release.result != 'failure'
     needs: [web, release]
     runs-on: ubuntu-latest
+    # one publish at a time, whole: a main push and a tag pushed together once raced, the main run
+    # choosing its firmware before the tag's release existed and publishing after it
+    concurrency:
+      group: pages-publish
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
