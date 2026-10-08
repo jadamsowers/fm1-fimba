@@ -12,7 +12,10 @@ taken from its section below. Add the section in the same pull request as the `V
   resonance below the lowest tine, and barely changed the sound. Box and Gourd have a hole; Board and
   None don't.
 - The hand glides over the hole in about 20 ms, so the Hole key covers and uncovers it without a click.
-- **Wah rate**'s lowest setting reads **Off** (it was "Hand"): the hole moves only when you move it.
+- **Wah is how much wah.** With Wah rate on, the hand flutters from open to Wah and back, so Wah 100 is
+  the full sweep. It was the other way round: the flutter filled what Wah left open, so Wah 100 didn't
+  move at all.
+- **Wah rate**'s lowest setting reads **Off** (it was "Hand"): the hand stays where Wah puts it.
 
 ## 0.5.0
 

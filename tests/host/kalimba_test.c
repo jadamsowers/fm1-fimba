@@ -387,16 +387,29 @@ static void test_body(void)
     render(0, 8820);                             /* (the hand glides there in ~20 ms) */
     CHECK(open_lvl > 0.99f && km_hole_open < 0.15f, "the hole: %.2f open, %.2f covered", (double)open_lvl, (double)km_hole_open);
     km_hole(HOLE_MIDI, 0);
-    km_set(P_WAHRATE, 60);
-    {
-        float lo = 1.0f, hi = 0.0f;
-        int i;
-        for (i = 0; i < 200; i++) {
-            render(0, 256);
-            lo = fm_minf(lo, km_hole_open);
-            hi = fm_maxf(hi, km_hole_open);
+    {   /* with a rate, Wah is how far the fluttering hand goes: more Wah, more wah (it was the other way:
+         * the flutter filled what Wah left open, so Wah 100 didn't move at all) */
+        static const int W[4] = {0, 20, 100, 100}, R[4] = {60, 60, 60, 100};
+        float range[4];
+        int k, i;
+        for (k = 0; k < 4; k++) {
+            float lo = 1.0f, hi = 0.0f;
+            km_set(P_WAH, W[k]);
+            km_set(P_WAHRATE, R[k]);
+            render(0, 8820);
+            for (i = 0; i < 200; i++) {
+                render(0, 256);
+                lo = fm_minf(lo, km_hole_open);
+                hi = fm_maxf(hi, km_hole_open);
+            }
+            range[k] = hi - lo;
         }
-        CHECK(hi - lo > 0.5f, "the wah LFO moves the hole (%.2f..%.2f)", (double)lo, (double)hi);
+        CHECK(range[0] < 0.01f && range[1] > 0.1f && range[2] > 0.8f && range[2] > range[1] * 3.0f,
+              "the flutter's depth follows Wah: %.2f at 0, %.2f at 20, %.2f at 100", (double)range[0], (double)range[1],
+              (double)range[2]);
+        CHECK(range[3] > 0.7f, "the fastest flutter (~8 Hz) isn't smoothed away: %.2f", (double)range[3]);
+        km_set(P_WAH, 0);
+        km_set(P_WAHRATE, 0);
     }
     fresh();
     km_set(P_BODY, BODY_GOURD);
