@@ -2,6 +2,10 @@
 # Transpose (Keys page KNOB 2, or PRESETS) and the octave shift it
 # (params: 16 Layout 19 Black 28 Octave 29 Transpose)
 wav keyboard.wav
+# MIDI out on (GLO KNOB 3; off by default): the keys' notes are counted below
+tap GLO
+spin K3 1
+expect par26 1
 tap SEL
 spin K1 1
 expect par16 1

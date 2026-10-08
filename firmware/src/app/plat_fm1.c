@@ -39,19 +39,26 @@ static void led_pos_init(void)
                     led_pos[id] = (uint8_t)((p << 3) | r);
     }
 }
-void plat_leds(uint32_t buttons, uint32_t keys)
+void plat_leds(uint32_t buttons, uint32_t keys, uint32_t dim_keys)
 {
-    uint8_t nl[FM1_NCOL] = {0};
+    uint8_t nl[FM1_NCOL] = {0}, nd[FM1_NCOL] = {0};
     uint32_t i, c;
     for (i = 0; i < NB + NKEYS; i++) {
         uint32_t id = i < NB ? panel.btn[i] : 14u + (i - NB);
         int on = i < NB ? (buttons >> i) & 1u : (keys >> (i - NB)) & 1u;
+        int dim = i >= NB && ((dim_keys >> (i - NB)) & 1u);
         uint8_t q = led_pos[id];
-        if (on && q != 0xFF)
+        if (q == 0xFF)
+            continue;
+        if (on)
             nl[q >> 3] |= (uint8_t)(1u << (q & 7u));
+        else if (dim)
+            nd[q >> 3] |= (uint8_t)(1u << (q & 7u));
     }
-    for (c = 0; c < FM1_NCOL; c++)
+    for (c = 0; c < FM1_NCOL; c++) {
         fm1_led[c] = nl[c];
+        fm1_led_dim[c] = nd[c];
+    }
 }
 
 /* MIDI: Felucca's rings carry 4-byte USB-MIDI event packets, byte 0 = cable / CIN */

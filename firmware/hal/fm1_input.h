@@ -25,6 +25,8 @@
  * quadrature cycle. fm1_enc_take() returns the steps.
  * LEDs: set fm1_led[col] (packed row bits, bit1 PA5..bit4 PA8); they are lit
  * while that column is selected. fm1_led_key/btn helpers address them by id.
+ * FiMba: fm1_led_dim[col], the same, lit only one frame in FM1_LED_DIM: dim
+ * (~900 frames a second from the tick: a quarter as bright, at ~225 Hz).
  */
 #pragma once
 #include <stdint.h>
@@ -38,6 +40,9 @@
 #define FM1_LED_US 40u           /* LED on-time per column (brightness vs scan rate) */
 #endif
 #define FM1_DEBOUNCE 8u           /* frames (~0.6 ms each) */
+#ifndef FM1_LED_DIM
+#define FM1_LED_DIM 4u            /* a dim LED: lit one frame in this many */
+#endif
 #define FM1_SETTLE_US 10u
 #define FM1_REST_FRAMES 40u       /* ~25 ms still = a detent position */
 #define FM1_NCOL 11u
@@ -79,6 +84,8 @@ static volatile struct {
     uint32_t frames;
 } fm1_in;
 static uint8_t fm1_led[FM1_NCOL];
+static uint8_t fm1_led_dim[FM1_NCOL];
+static uint8_t fm1__dim_ph;           /* frames, mod FM1_LED_DIM: dim LEDs are lit on 0 */
 
 static void fm1__led_lines(uint32_t rowmask)
 {
@@ -194,10 +201,11 @@ static void fm1_input_scan(void)
         fm1__sr_word(0xFFFFu ^ (1u << p) ^ (p < 2u ? 1u << (11u + p) : 0u));
         fm1__wait(FM1_SETTLE_US);
         fm1_in.raw[p] = (uint8_t)fm1__rows();
-        fm1__led_lines(fm1_led[p]);
+        fm1__led_lines(fm1_led[p] | (fm1__dim_ph == 0u ? fm1_led_dim[p] : 0u));
         fm1__wait(FM1_LED_US);
     }
     fm1__led_lines(0);
+    fm1__dim_ph = (uint8_t)(fm1__dim_ph + 1u == FM1_LED_DIM ? 0u : fm1__dim_ph + 1u);
     fm1__frame();
 }
 
@@ -265,7 +273,9 @@ static void fm1_input_tick(void)
     fm1__led_lines(0);
     fm1_in.raw[p] = (uint8_t)fm1__rows();          /* column p has been latched one tick */
     fm1__sr_word(0xFFFFu ^ (1u << n) ^ (n < 2u ? 1u << (11u + n) : 0u));
-    fm1__led_lines(fm1_led[n]);
+    if (n == 0u)
+        fm1__dim_ph = (uint8_t)(fm1__dim_ph + 1u == FM1_LED_DIM ? 0u : fm1__dim_ph + 1u);
+    fm1__led_lines(fm1_led[n] | (fm1__dim_ph == 0u ? fm1_led_dim[n] : 0u));
     fm1__tick_col = (uint8_t)n;
     if (n == 0u)
         fm1__frame();

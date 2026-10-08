@@ -20,7 +20,7 @@ static const km_param_t PARAMS[P_NPARAMS] = {
     {"Grains", 0, 100, 0}, {"Grain ms", 20, 500, 140}, {"Density", 1, 60, 14}, {"Pitch", 0, GP_N - 1, GP_UP12},
     {"Layout", 0, LAY_N - 1, LAY_TINE}, {"Scale", 0, KM_NSCALE - 1, 0}, {"Key", 0, 11, 0}, {"Black", 0, BLK_N - 1, BLK_CHORDS},
     {"Feedback", 0, 95, 45}, {"Spray", 0, 100, 30}, {"Strum ms", 0, 120, 30}, {"Release", 0, 1, 0},
-    {"Tune", -50, 50, 0}, {"MIDI ch", 0, 16, 0}, {"MIDI out", 0, 1, 1}, {"Width", 0, 100, 70},
+    {"Tune", -50, 50, 0}, {"MIDI ch", 0, 16, 0}, {"MIDI out", 0, 1, 0}, {"Width", 0, 100, 70},
     {"Octave", -2, 2, 0}, {"Transpose", -12, 12, 0},
     {"Tape", 0, 100, 0}, {"Lo-fi", 0, 100, 0}, {"Chorus", 0, 100, 0}, {"Filter", -100, 100, 0},
     {"Pattern", 0, PAT_N - 1, PAT_THUMBS}, {"Tempo", 40, 200, 96}, {"Glide", 0, 100, 30}, {"Tuning", 0, TUNE_N - 1, TUNE_EQUAL},
@@ -587,6 +587,7 @@ static const body_t BODIES[BODY_N] = {
      0.0f, 3800.0f, 1.4f, 0.5f},                                                           /* Gourd: hollow, boomy, dark */
 };
 static svf_t bf[4], muf_l, muf_r;
+int km_body_hole(int body) { return BODIES[(unsigned)body < BODY_N ? body : 0].m[0][0] > 0.0f; }
 static float hole_amt[HOLE_N], wah_ph, wah_inc;
 /* the hand over the hole: the Wah knob's and the other hands' (mod wheel, pressure, the Hole key) cover,
  * each where it is and where it glides to; the cover the hole has now; the level it leaves (target, now) */

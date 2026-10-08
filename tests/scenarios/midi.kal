@@ -62,8 +62,13 @@ wait 100
 # clock and other system messages are ignored
 midi F8 00 00
 midi FA 00 00
-# MIDI out: a key sends a note on and its release a note off
+# MIDI out (GLO KNOB 3): off by default, nothing sent; on, a key sends a note on and its release a note off
+expect par26 0
+tapkey w7
 expect midi_out 0
+tap GLO
+spin K3 1
+expect par26 1
 tapkey w7
 expect midi_out 2
 expect dropped 0
