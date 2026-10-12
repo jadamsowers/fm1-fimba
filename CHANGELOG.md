@@ -4,6 +4,12 @@ A release is a push to `main` that changes `VERSION` to a version with no tag ye
 release build, tags the commit `vX.Y.Z` and publishes the GitHub Release with that version's notes,
 taken from its section below. Add the section in the same pull request as the `VERSION` change.
 
+## 0.6.1
+
+- **Less work with Reverb at 0:** once the reverb's tail has died away, the reverb stops running until
+  you turn it up again (on the FM-1, about 24% → 15% CPU when nothing is playing). Nothing changes in
+  the sound.
+
 ## 0.6.0
 
 - **Reset to the defaults:** hold SAVE for 1.5 s, then press SAVE again to confirm (anything else, or

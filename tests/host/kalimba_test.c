@@ -939,6 +939,29 @@ static void listen(const char *dir)
     printf("  wrote %s/*.wav (one per material)\n", dir);
 }
 
+/* Reverb 0 with nothing left in the plate stops it (it costs the most of the effects): turned up again,
+ * it is heard at once */
+static void test_reverb_idle(void)
+{
+    float dry = 0.0f, wet = 0.0f;
+    int r;
+    for (r = 0; r < 2; r++) {
+        fresh();
+        km_set(P_MATERIAL, MAT_BAMBOO);
+        render(0, 44100 * 3);                    /* Reverb 0, silence: long enough for the plate to stop */
+        if (r)
+            km_set(P_REVERB, 80);
+        km_pluck(7200, 120, 0, 0);
+        render(0, 44100 * 2);
+        if (r)
+            wet = rms(bufl, 44100, 22050);       /* a second on: the tine is gone, the room isn't */
+        else
+            dry = rms(bufl, 44100, 22050);
+    }
+    CHECK(wet > 1e-4f && wet > 20.0f * dry, "the reverb wakes (%.6f vs dry %.6f)", (double)wet, (double)dry);
+    CHECK(!nan_seen, "reverb idle NaN");
+}
+
 int main(int argc, char **argv)
 {
     test_music();
@@ -948,6 +971,7 @@ int main(int argc, char **argv)
     test_voices();
     test_roll();
     test_delay();
+    test_reverb_idle();
     test_grains();
     test_body();
     test_bodies();

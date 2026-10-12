@@ -690,6 +690,10 @@ typedef struct {
 } dl_t;
 static dl_t dl[L_N];
 static float pl_bw, pl_damp_l, pl_damp_r, pl_decay = 0.5f, pl_dd2 = 0.5f, lfo_s, lfo_c = 1.0f;
+/* Reverb 0 and the tail gone (out below -120 dB for 2 s, longer than a trip round the tank): the plate
+ * stops until Reverb is turned up again. It is the biggest fixed cost; what it leaves is below hearing */
+#define PL_IDLE 88200u
+static uint32_t pl_quiet;
 
 static inline float tap(const dl_t *d, int k)
 {
@@ -766,6 +770,7 @@ static void plate_init(void)
     pl_bw = pl_damp_l = pl_damp_r = 0.0f;
     lfo_s = 0.0f;
     lfo_c = 1.0f;
+    pl_quiet = 0;
 }
 
 /* -------------------------------------------------- half-rate lines --- */
@@ -1691,7 +1696,14 @@ static void render_chunk(int32_t *out, uint32_t n, float gain)
         }
         dlo = (d_prev_l + (d_cur_l - d_prev_l) * fr) * d_mix;
         dro = (d_prev_r + (d_cur_r - d_prev_r) * fr) * d_mix;
-        reverb(((l + r) * 0.5f + (gl + grr) * 0.8f + (dlo + dro) * 0.5f) * rsend * 0.6f, &wl, &wr);
+        if (rsend > 0.0f)
+            pl_quiet = 0;
+        if (pl_quiet < PL_IDLE) {
+            reverb(((l + r) * 0.5f + (gl + grr) * 0.8f + (dlo + dro) * 0.5f) * rsend * 0.6f, &wl, &wr);
+            pl_quiet = rsend <= 0.0f && fm_fabsf(wl) + fm_fabsf(wr) < 1e-6f ? pl_quiet + 1u : 0u;
+        } else {
+            wl = wr = 0.0f;
+        }
         l = l + gl + dlo * (0.5f + 0.5f * width) + dro * (0.5f - 0.5f * width) + wl;
         r = r + grr + dro * (0.5f + 0.5f * width) + dlo * (0.5f - 0.5f * width) + wr;
         fx_out(&l, &r);                                 /* the filter and the tape, on everything */
