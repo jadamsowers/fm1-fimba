@@ -47,7 +47,7 @@ const p = spawn(chrome, ["--headless=new", "--disable-gpu", "--no-first-run", "-
   `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "about:blank"], { stdio: "ignore" });
 let failed = 0;
 const ok = (cond, what) => { console.log(`${what.padEnd(70)} ${cond ? "ok" : "FAIL"}`); if (!cond) failed++; };
-const finish = (code) => { p.kill("SIGKILL"); server.close(); rmSync(profile, { recursive: true, force: true }); process.exit(code); };
+const finish = (code) => { p.kill("SIGKILL"); server.close(); rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); process.exit(code); };   // (a killed Chrome may still be writing its profile)
 setTimeout(() => { console.log("TIMEOUT"); finish(2); }, 150000);
 
 let target;
