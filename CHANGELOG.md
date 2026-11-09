@@ -4,6 +4,13 @@ A release is a push to `main` that changes `VERSION` to a version with no tag ye
 release build, tags the commit `vX.Y.Z` and publishes the GitHub Release with that version's notes,
 taken from its section below. Add the section in the same pull request as the `VERSION` change.
 
+## 0.6.2
+
+- **Works with the newer FM-1s:** units sold since autumn 2026 (mostly on AliExpress) have a
+  different flash chip, the UC25HQ80. FiMba-1 didn't know it, so on those units nothing was saved
+  (NOT SAVED / FLASH ERROR) and new versions couldn't be installed from the web page. They now save and
+  update like any other FM-1. Nothing changes on the older units.
+
 ## 0.6.1
 
 - **Less work with Reverb at 0:** once the reverb's tail has died away, the reverb stops running until
