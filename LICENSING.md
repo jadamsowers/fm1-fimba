@@ -15,6 +15,7 @@ complete corresponding source under the same licence.
 | Platform tests (`tests/host/{fastmath,encoder,uac,trs}_test.c`, `tests/{storage,ota,ldr}_test.c`, `tests/install_test.py`) | FoMni / Felucca | GPL-3.0-only |
 | The simulated FM-1 for the web installer's tests (`tests/web/fake_fm1.mjs`) and the installer panel's protocol use (`web/fm1ota.js`, `web/fm1pkg.js`, inlined into the page) | Felucca's `web/test_web.mjs` and update modules, by way of FoMni's web installer | GPL-3.0-only |
 | The flash parts the storage may use: `firmware/hal/fm1_flash_ok.h`, `tests/host/flash_ok_test.c` | [fm1-base](https://github.com/charlesvestal/fm1-base) (`device/fm1_flash_ok.h`, `tests/flash_ok_test.c`, fm1-base#35) by way of [FoMni](https://github.com/charlesvestal/fm1-fomni), Copyright (C) 2026 Laurens (@profikid) | MPL-2.0 (compatible with the GPL: MPL-2.0 section 3.3) |
+| The update handshake's tests: `tests/ota_hs_test.c`, `tests/host/installer_hs_test.mjs` | [felucca-bsp](https://github.com/hugelton/felucca-bsp)'s `tests/ota_test.c` and [fm1-base](https://github.com/charlesvestal/fm1-base)'s `tests/installer_hs_test.mjs`, by way of FoMni, Copyright (C) 2026 Charles Vestal | MPL-2.0 (compatible with the GPL: MPL-2.0 section 3.3) |
 | Everything else: the tine, body, buzz, grain and delay engine and the music (`firmware/src/dsp/kalimba.{c,h}`), the UI's instrument, `tests/host/kalimba_test.c`, `tests/scenarios/` | FiMba-1 | GPL-3.0-only |
 
 ## Third-party material

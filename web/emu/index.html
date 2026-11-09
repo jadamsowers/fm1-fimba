@@ -16,7 +16,10 @@ h1 { font: 700 2rem/1.1 "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0
 header p { margin: 0; color: var(--muted); }
 header nav { margin-left: auto; display: flex; gap: 1rem; }
 a { color: var(--accent); }
-.device { position: relative; width: 100%; aspect-ratio: 1000 / 640; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+/* at phone width the drawn panel keeps its controls 24 px or more: it keeps a minimum width and scrolls
+   sideways in its own box, not the page */
+.devicebox { overflow-x: auto; overscroll-behavior-x: contain; }
+.device { position: relative; width: 100%; min-width: 560px; aspect-ratio: 1000 / 640; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 .device svg { pointer-events: none; }
 .hit { position: absolute; touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px; }
 .hit.knob { cursor: ns-resize; border-radius: 50%; }
@@ -82,10 +85,12 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
 </header>
 
 <p class="turn">Turn your phone sideways for bigger controls.</p>
+<div class="devicebox">
 <div class="device" id="device">
   <svg id="panel" viewBox="0 0 1000 640" role="application" aria-label="The FM-1: knobs, buttons, screen and keys"></svg>
   <canvas id="screen" width="240" height="240" aria-label="The FM-1 screen"></canvas>
   <div class="start" id="start"><button id="go">Switch on</button></div>
+</div>
 </div>
 
 <div class="bar">
@@ -99,7 +104,7 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
 <section class="install" id="install" aria-labelledby="install-h">
   <h2 id="install-h">Install on your FM-1</h2>
   <p class="warn"><b>Beta.</b> Custom firmware is installed at your own risk. Before you start, download M-VAVE's
-    stock firmware (FM-1 V15, "PC Firmware" at <a href="https://www.m-vave.com/download" target="_blank" rel="noopener">m-vave.com/download</a>)
+    stock firmware (FM-1 V16, "PC Firmware" at <a href="https://www.m-vave.com/download" target="_blank" rel="noopener">m-vave.com/download</a>)
     so you can always go back (below).</p>
   <ol>
     <li>Connect the FM-1 to this computer with a USB data cable, directly (no hub, probe or Transporter). Close other apps that use MIDI.</li>
@@ -119,12 +124,19 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
   <p class="status" id="instStatus" role="status" aria-live="polite"></p>
   <details>
     <summary><h3>Back to the stock firmware</h3></summary>
-    <p>This writes M-VAVE's own FM-1 V15 back, from FiMba-1 (or its safe mode, or any Felucca-family firmware) over the
-      same USB cable. Choose the file you downloaded from M-VAVE: it is checked (SHA-256) before anything is written.
+    <p>This writes M-VAVE's own FM-1 firmware (V16 or V15) back, from FiMba-1 (or its safe mode, or any Felucca-family
+      firmware) over the same USB cable. Download
+      <a href="https://yms-file-store.oss-cn-hongkong.aliyuncs.com/software/firmware/FM-1.fwsc">M-VAVE's FM-1.fwsc</a> (V16);
+      if the FM-1 doesn't take it, use
+      <a href="https://web.archive.org/web/20261009203224id_/https://yms-file-store.oss-cn-hongkong.aliyuncs.com/software/firmware/FM-1.fwsc">V15's FM-1.fwsc</a>
+      (Internet Archive) instead. The file is checked (SHA-256) before anything is written.
       If the FM-1 doesn't start at all, it comes up in safe mode after two tries, where this still works; past that,
       <code>tools/fm1_rescue.py</code> in the repository restores it from a Mac.</p>
+    <p>M-VAVE's own updater, M-UPGRADE 3.11, finds FiMba-1 0.6.2 and later, not older versions (it says "A USB MIDI
+      device is present but did not answer"): use this button for those. It also takes the FM-1 back from M-VAVE's
+      FM1 Open firmware.</p>
     <div class="row">
-      <input type="file" id="stockFile" accept=".fwsc" aria-label="M-VAVE's FM-1 V15 file">
+      <input type="file" id="stockFile" accept=".fwsc" aria-label="M-VAVE's FM-1 V16 or V15 file">
       <button id="stockGo" type="button" class="quiet" disabled>Install the stock firmware</button>
     </div>
   </details>
@@ -538,7 +550,11 @@ document.getElementById("reset").addEventListener("click", () => {
    The latest release's package sits next to this page on GitHub Pages (firmware/latest.json, put there by CI). */
 /*FM1LIB*/
 const $ = (id) => document.getElementById(id);
-const STOCK_SHA256 = "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a";   /* M-VAVE FM-1 V15 */
+/* M-VAVE's stock files, by SHA-256. The FM-1 takes only the one whose flash head it has (firmware/src/ota.c) */
+const STOCK_FILES = {
+  "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a": "V15",
+  "d017fb65e70aca97ee29d944470c3515a74581df5c0576bf70de917c7b2b61d5": "V16",
+};
 const ERR = {
   denied: "MIDI (SysEx) access was not allowed. Allow MIDI in the site settings (the address bar) and press Install again.",
   notfound: "FM-1 not found. Check the USB cable (a data cable, not charge-only), close other apps that use MIDI, and press Install again.",
@@ -549,6 +565,8 @@ const ERR = {
   noreturn: "The FM-1 did not come back. Power-cycle it.",
   mismatch: "Written, but the FM-1 reports another version: ",
   badreq: "The FM-1 asked for something the package doesn't have: is it the right file? ",
+  open: "This FM-1 runs M-VAVE's FM1 Open firmware: put the stock firmware back first (Back to the stock firmware, below), then install FiMba-1. It reports: ",
+  stockhead: "Nothing was written. The FM-1 takes only the stock version whose bootloader it already has: choose the other file (V15 or V16) and press the button again.",
 };
 let latest = null, chosen = null, stock = null, writing = false;
 const status = (t) => { $("instStatus").textContent = t; };
@@ -604,8 +622,8 @@ $("stockFile").addEventListener("change", async (e) => {
     try {
       const raw = new Uint8Array(await f.arrayBuffer());
       const hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", raw))].map((b) => b.toString(16).padStart(2, "0")).join("");
-      if (hex !== STOCK_SHA256) status("That is not M-VAVE's FM-1 V15 file. Choose the file from M-VAVE's download page.");
-      else { stock = readPackage(raw, f.name); status("That is M-VAVE's FM-1 V15. Press Install the stock firmware."); }
+      if (!STOCK_FILES[hex]) status("That is not M-VAVE's FM-1 V15 or V16 file. Choose a file from the links above.");
+      else { stock = readPackage(raw, f.name); status(`That is M-VAVE's FM-1 ${STOCK_FILES[hex]}. Press Install the stock firmware.`); }
     } catch (err) { status(err.message); }
   }
   sync();
@@ -640,6 +658,7 @@ async function run(pkg, label, isStock) {
     }
   } catch (e) {
     if (isStock && e && e.code === "mismatch") { $("instBar").value = 100; status("Done: the FM-1 has restarted with its original firmware."); }
+    else if (isStock && e && e.code === "stopped" && e.step === 1) status(ERR.stockhead);   /* the other version's head */
     else status((e && e.code && ERR[e.code] ? ERR[e.code] + (e.detail || "") : "Error: " + (e && e.message)));
     log(String((e && e.stack) || e));
   }

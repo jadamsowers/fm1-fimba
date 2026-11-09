@@ -137,9 +137,10 @@ python3 tools/check_fwsc.py build/fimba.fwsc --app build/fimba.bin --ref build/f
 
 Before the first install, get the way back ready:
 
-- Download M-VAVE's stock firmware (m-vave.com/download, FM-1 V15, "PC Firmware") and keep it.
-  `tools/fm1_rescue.py` accepts only that exact file (it checks its SHA-256), and it is what you'd
-  need if the FM-1 ever ends up in a crash loop.
+- Download M-VAVE's stock firmware (m-vave.com/download, FM-1 V16, "PC Firmware"; V15 is on the
+  Internet Archive) and keep it. `tools/fm1_rescue.py` accepts only those exact files (it checks their
+  SHA-256) and writes the one whose head the FM-1 has; it is what you'd need if the FM-1 ever ends up
+  in a crash loop.
 - `python3 tools/fm1_install.py --info` reads the identity of the connected FM-1 without writing
   anything: run it first to see that the installer finds the device.
 
