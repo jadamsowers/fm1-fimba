@@ -91,6 +91,8 @@ In rough order:
 - The first install on a real FM-1, from the web page's updater: it boots and plays.
 - The Tine layout turned round to match a real 17-key kalimba, the second note left of the lowest
   ([#1](https://github.com/jadamsowers/fm1-fimba/issues/1)); **Mirror** keeps the other way.
+- FM-1s with the newer flash chip (the UC25HQ80, on units sold since autumn 2026) save and update
+  again; before, their saves stayed in RAM and the update loader wasn't started.
 
 ## Credits
 
@@ -105,6 +107,7 @@ In rough order:
 | Barlow (The Barlow Project Authors), Terminus (Dimitar Toshkov Zhekov)                                                                        | The screen's fonts                                                                                                                                                                           | SIL OFL 1.1  |
 | JieLi AC79 SDK                                                                                                                                | Three small files placed in the package at build time (not in this repository)                                                                                                               | Apache-2.0   |
 | [enix223/build-jieli](https://github.com/enix223/jieli-docker-build-env), [amitv87's SDK mirror](https://github.com/amitv87/fw-AC79_AIoT_SDK) | Fallback sources for the toolchain and SDK files when JieLi's servers can't be reached                                                                                                       | —            |
+| [fm1-base](https://github.com/charlesvestal/fm1-base), Laurens (@profikid)                                                                    | Which flash parts the storage may use (`firmware/hal/fm1_flash_ok.h`), by way of FoMni                                                                                                       | MPL-2.0      |
 | [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter), [jl-uboot-tool](https://github.com/kagaimiq/jl-uboot-tool)               | The protocol and flash loader behind the rescue tool (via Felucca)                                                                                                                           | —            |
 
 The details are in [LICENSING.md](LICENSING.md). FiMba-1 isn't affiliated with or endorsed by
