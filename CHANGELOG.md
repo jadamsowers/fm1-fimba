@@ -10,6 +10,16 @@ taken from its section below. Add the section in the same pull request as the `V
   different flash chip, the UC25HQ80. FiMba-1 didn't know it, so on those units nothing was saved
   (NOT SAVED / FLASH ERROR) and new versions couldn't be installed from the web page. They now save and
   update like any other FM-1. Nothing changes on the older units.
+- **M-UPGRADE finds FiMba-1 again:** M-VAVE's updater, from version 3.11, didn't recognise FiMba-1
+  ("A USB MIDI device is present but did not answer"), so you couldn't use it to go back to the stock
+  firmware. It finds this version and later ones. To leave an older FiMba-1, use the web page's **Back
+  to the stock firmware**.
+- **Back to the stock firmware takes V16:** M-VAVE's download is now FM-1 V16, and the web page only
+  took V15. It takes either now; the FM-1 accepts only the one its bootloader matches, so if one is
+  refused, the page says to try the other (V15 is linked on the Internet Archive). The same button
+  also takes an FM-1 back from M-VAVE's FM1 Open firmware.
+- **The web app on a phone:** at phone width the panel keeps its controls big enough to press, and
+  scrolls sideways in its own box.
 
 ## 0.6.1
 

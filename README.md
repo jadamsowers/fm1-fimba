@@ -92,7 +92,8 @@ In rough order:
 - The Tine layout turned round to match a real 17-key kalimba, the second note left of the lowest
   ([#1](https://github.com/jadamsowers/fm1-fimba/issues/1)); **Mirror** keeps the other way.
 - FM-1s with the newer flash chip (the UC25HQ80, on units sold since autumn 2026) save and update
-  again; before, their saves stayed in RAM and the update loader wasn't started.
+  again; before, their saves stayed in RAM and the update loader wasn't started. M-UPGRADE 3.11 finds
+  FiMba-1 again, and the way back to stock takes M-VAVE's V16 and leaves its FM1 Open firmware.
 
 ## Credits
 
@@ -508,8 +509,10 @@ The same page installs FiMba-1 on your FM-1 (Chrome or Edge: it uses Web MIDI wi
 Felucca's update protocol, the one the command-line installer speaks. Connect the FM-1 by USB and
 press **Install FiMba-1 X.Y.Z** to install the latest release. Or choose any `.fwsc` file (a release,
 a pull request's build) and press **Install this file**. Under **Back to the stock firmware**, choose
-M-VAVE's own FM-1 V15 file; it's checked (SHA-256) before anything is written. An interrupted install
-picks up where it stopped when you press Install again.
+M-VAVE's own FM-1 V16 or V15 file; it's checked (SHA-256) before anything is written (the FM-1 takes
+only the version whose bootloader it has: if one is refused, choose the other). The same button takes
+an FM-1 back from M-VAVE's FM1 Open firmware. M-VAVE's own updater, M-UPGRADE 3.11, finds FiMba-1
+0.6.2 and later. An interrupted install picks up where it stopped when you press Install again.
 
 The site is rebuilt and published by GitHub Actions whenever a change reaches `main`. Every pull
 request is built and tested first ([below](#continuous-integration)). To build it yourself (needs
@@ -558,7 +561,7 @@ or install the latest one straight from the [web page](https://jadamsowers.githu
   and compares it region by region with FoMni's own package. Everything but the app is
   byte-identical (see BUILDING.md, "Before installing").
 - **Have stock firmware ready.** Before the first install, download M-VAVE's stock firmware (FM-1
-  V15, "PC Firmware" at m-vave.com/download). `tools/fm1_rescue.py` puts it back if the FM-1 ever
+  V16, "PC Firmware" at m-vave.com/download; V15 is on the Internet Archive). `tools/fm1_rescue.py` puts it back if the FM-1 ever
   ends up in a crash loop, and FoMni's web installer can also restore it.
 
 ### Continuous integration and releases
