@@ -157,7 +157,15 @@ FoMni and others do. It checks out the commit, installs JieLi's Linux toolchain 
 fixed tag, runs `tools/build.py --release X.Y.Z` and `tests/run_tests.sh` (a failing test stops the
 release), and signs build provenance for the package. The release job verifies that signature and the
 package's CRCs, and warns if the package isn't byte-identical to the firmware job's (the one compared
-with FoMni's). The Firmware Hub shows such packages as built from source.
+with FoMni's).
+
+The Firmware Hub shows a package as built from source only when the builder attested it *for a release
+tag*, and the run on `main` comes before the tag exists. So the release job then starts
+`.github/workflows/release-attest.yml` on the new tag. A tag pushed by a run starts no other run, but a
+dispatch does. That run builds the same commit again with the builder (`tools/attested_build.sh`, the
+same command both use), attests it for the tag and puts it on the release in place of the asset of the
+same name. The build is reproducible, so it's the same file. Its last job checks that: the release's
+package must have the SHA-256 the main run published and verify for `--source-ref refs/tags/vX.Y.Z`.
 
 To check a downloaded package yourself (GitHub CLI, signed in):
 

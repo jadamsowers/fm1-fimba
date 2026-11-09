@@ -65,5 +65,6 @@ The steps for every GitHub issue or new feature, from the first look to the rele
 - Never push tags by hand, never create releases with `gh release create`, and never re-run the
   Pages job. GitHub Pages keeps only the first deployment of a commit, and a tag pushed by a run
   starts no other run.
-- Afterwards, check: `gh release view vX.Y.Z`, `gh attestation verify` on its `.fwsc` (BUILDING.md), and
+- Afterwards, check: `gh release view vX.Y.Z`; that the "Attest the release on its tag" run it started
+  passed (`gh run list --workflow release-attest.yml`; if it failed, re-run it, never re-release); and
   `curl -s https://jadamsowers.github.io/fm1-fimba/firmware/latest.json` shows the new version.
