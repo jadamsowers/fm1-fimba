@@ -81,6 +81,7 @@ jobs:
           sh web/emu/build.sh
           mkdir -p site
           cp build/emu/FiMba-1.html site/index.html
+          cp -R web/words site/words        # the screen reader's words files: every one, for the FM-1s that point at them
           touch site/.nojekyll
 
       - name: Keep the web app with the run

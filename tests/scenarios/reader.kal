@@ -1,0 +1,61 @@
+# the screen reader (fm1-reader, announce.c): a reader listens, and each page, knob and button message is
+# said once, in the screen's own text (the words file says it in full); the header when it starts, and on WHERE
+wait 200
+listen
+wait 100
+said Tine page: Material Steel, Hardness 45, Decay 50, Tone 55. C Major
+# a page, once it settles
+tap ENV
+wait 300
+said Body page: Body Box, Buzz 0, Wah 0, Wah rate Off
+# a knob: its name and value, once it settles
+spin K2 3
+wait 300
+said Buzz 3
+# a body without a sound hole: the wah greyed, said as such; turning it is a warning
+spin K1 -1
+wait 300
+said Body Board
+spin K3 1
+wait 50
+said NO HOLE BOX OR GOURD
+tap SEL
+tap ENV
+wait 300
+said Wah off, no sound hole
+# the encoders
+turn SELECT 1
+wait 300
+said Material Brass
+turn ALGO 1
+wait 300
+said Scale Minor
+turn PRESET 1
+wait 300
+said Key C#
+# the Keys page follows the layout: Keyboard is said as a new page
+tap SEL
+wait 300
+said Keys page: Layout Tine, Scale Minor, Key C#, Black Chords
+spin K1 1
+wait 300
+said Keys page: Layout Keyboard, Transpose 0, Octave 0
+# the buttons' messages (OCT+ says its own: not again as a readout)
+tap PLAY
+said GRAINS FROZEN
+tap ARP
+said PATTERN Thumbs
+tap REC
+said PALM MUTE
+tap OCT+
+wait 300
+said Octave +1
+tap SAVE
+said SAVED
+# MIDI moving a knob
+midi B0 48 7F
+wait 300
+said Decay 100
+# WHERE: everything again, the header's chips too
+where
+said Keys page: Layout Keyboard, Transpose 0, Octave +1. Keyboard. Grains frozen. Pattern on
