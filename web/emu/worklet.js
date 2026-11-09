@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // FiMba-1 in an AudioWorklet: kalimba.wasm is the whole FM-1 app (web/emu/kalimba_web.c). Each render
 // quantum asks it for 128 frames, which runs the device's clock forward; between quanta the page's
-// input goes in and, about 30 times a second, the screen, the lights and any saved objects go out.
+// input goes in and, about 30 times a second, the screen, the lights, any saved objects and what the
+// firmware said to a screen reader (fm1-reader's SysEx frames) go out.
 
 const clock = globalThis.performance ? () => globalThis.performance.now() : () => Date.now();
 
@@ -57,6 +58,10 @@ class Kalimba extends AudioWorkletProcessor {
       this.ex.web_midi(m.st, m.d1 | 0, m.d2 | 0);
     } else if (m.type === "master") {
       this.ex.web_master(m.value | 0);
+    } else if (m.type === "sysex") {                  // a screen reader's frame: the bytes between F0 and F7
+      const b = Uint8Array.from(m.bytes).subarray(0, 64);
+      new Uint8Array(this.mem.buffer, this.ex.web_sysex_buf(), b.length).set(b);
+      this.ex.web_sysex(b.length);
     }
   }
 
@@ -69,6 +74,12 @@ class Kalimba extends AudioWorkletProcessor {
       this.busy = this.frames = 0;
     }
     const transfer = [];
+    const said = ex.web_said_len();
+    if (said) {                                       // whole F0..F7 frames
+      msg.said = new Uint8Array(this.mem.buffer, ex.web_said_buf(), said).slice();
+      ex.web_said_clear();
+      transfer.push(msg.said.buffer);
+    }
     if (blits !== this.sentBlits) {
       this.sentBlits = blits;
       msg.fb = new Uint16Array(this.mem.buffer, ex.web_fb(), 240 * 240).slice();
