@@ -609,7 +609,9 @@ or install the latest one straight from the [web page](https://jadamsowers.githu
 - **Attested build**, by the shared FM-1 builder ([`zvenson/fm1-build`](https://github.com/zvenson/fm1-build)
   at `v1`, the tag The Firmware Hub has reviewed): it builds the package from the same commit with
   JieLi's own toolchain and SDK, runs the tests, and signs a record of where the package came from (an
-  attestation). A release publishes this package, and The Firmware Hub shows it as built from source.
+  attestation). A release publishes this package. Then `release-attest.yml` builds it again on the new
+  tag, because The Firmware Hub shows a package as built from source only when it was attested for a
+  release tag, and checks that the release still carries the same file.
 
 When each part runs:
 

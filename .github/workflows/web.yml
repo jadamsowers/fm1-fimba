@@ -7,8 +7,10 @@
 #                     https://jadamsowers.github.io/fm1-fimba/, with the latest release's firmware
 #                     beside it for the page's installer (firmware/latest.json)
 #   every run         the shared FM-1 builder (zvenson/fm1-build@v1) builds the package too, runs the tests
-#                     and signs its build provenance (an attestation): The Firmware Hub shows such packages
-#                     as built from source. A pull request proves that build works before it's merged.
+#                     and signs its build provenance (an attestation). A pull request proves that build
+#                     works before it's merged. On a release, its package is the one published, and
+#                     release-attest.yml then builds it again on the new tag: The Firmware Hub shows a
+#                     package as built from source only when it was attested for a release tag.
 #   a new VERSION     a push to main whose VERSION has no tag yet is a release: a release build
 #                     (identity FM-1_8XXYYZZ, version on the splash and the Setup page), the commit
 #                     tagged vX.Y.Z and published as a GitHub Release with the attested .fwsc, the
@@ -185,21 +187,7 @@ jobs:
     with:
       sdk: true
       tests-block: true
-      build: |
-        set -euo pipefail
-        python3 -m pip install --quiet -r requirements.txt
-        sudo apt-get install -y -qq libfribidi0          # Pillow's raqm: the fonts as the firmware job has them
-        python3 -c "from PIL import features; assert features.check('raqm'), 'Pillow without raqm'"
-        ver='${{ needs.version.outputs.release }}'
-        mkdir -p build/release-assets
-        if [ -n "$ver" ]; then
-          python3 tools/build.py --release "$ver"
-          cp "build/fimba-$ver.fwsc" build/release-assets/
-          cp "build/fimba-$ver.fwsc" build/fimba.fwsc      # (the tests check the update path against build/fimba.fwsc)
-        else
-          python3 tools/build.py
-          cp build/fimba.fwsc build/release-assets/
-        fi
+      build: sh tools/attested_build.sh '${{ needs.version.outputs.release }}'
       test: sh tests/run_tests.sh
       packages: build/release-assets/*.fwsc
 
@@ -271,6 +259,7 @@ jobs:
     permissions:
       contents: write
       attestations: read
+      actions: write           # to start release-attest.yml on the new tag
     steps:
       - uses: actions/checkout@v7
 
@@ -304,3 +293,13 @@ jobs:
             echo; sed "s/VERSION/$VER/g" .github/release-notes.md; } > notes.md
           gh release create "v$VER" --target "$GITHUB_SHA" --title "FiMba-1 $VER (beta)" --notes-file notes.md \
             --prerelease out/fimba-"$VER".fwsc out/SHA256SUMS dist/FiMba-1-web/FiMba-1.html
+
+      - name: Attest it again on the tag (release-attest.yml)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ needs.version.outputs.release }}
+        run: |
+          # (a tag pushed by a run starts no other run, but a dispatch does)
+          gh workflow run release-attest.yml --repo "$GITHUB_REPOSITORY" --ref "v$VER" \
+            -f sha256="$(cut -d' ' -f1 out/SHA256SUMS)"
+          echo "started release-attest.yml on v$VER: its run attests the package for the tag"

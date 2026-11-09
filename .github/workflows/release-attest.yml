@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# A release's package, attested for its tag. The Firmware Hub shows "Built from source on GitHub" only for a
+# package the shared FM-1 builder (zvenson/fm1-build@v1) attested for a release tag. web.yml releases from main
+# (a new VERSION) and tags the commit; a tag pushed by a run starts no other run, so web.yml's release job starts
+# this one on the new tag. The builder builds the same commit again (tools/attested_build.sh), runs the tests,
+# attests the package and puts it on the tag's release, replacing the asset of the same name (the notes stay).
+# The build is reproducible, so it's the file already published: the check below makes sure of that.
+name: Attest the release on its tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha256:
+        description: "the SHA-256 of the package web.yml published"
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  attested:
+    name: Attested build on the tag
+    if: github.ref_type == 'tag'
+    uses: zvenson/fm1-build/.github/workflows/build.yml@v1
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    with:
+      sdk: true
+      tests-block: true
+      build: sh tools/attested_build.sh "${GITHUB_REF_NAME#v}"
+      test: sh tests/run_tests.sh
+      packages: build/release-assets/*.fwsc
+
+  check:
+    name: The release's package, attested for the tag
+    needs: attested
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - name: Same file as published, signed by the builder for this tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WANT: ${{ inputs.sha256 }}
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern "fimba-$ver.fwsc" --dir pkg
+          got=$(sha256sum "pkg/fimba-$ver.fwsc" | cut -d' ' -f1)
+          [ "$got" = "$WANT" ] ||
+            { echo "::error::the rebuilt package ($got) is not the one web.yml published ($WANT): the release now carries the rebuilt one; compare them before trusting either"; exit 1; }
+          gh attestation verify "pkg/fimba-$ver.fwsc" --repo "$GITHUB_REPOSITORY" --source-ref "$GITHUB_REF" \
+            --signer-workflow zvenson/fm1-build/.github/workflows/build.yml
+          echo "fimba-$ver.fwsc ($got): attested for $GITHUB_REF by the shared builder"
