@@ -113,7 +113,7 @@ jobs:
       JIELI_TOOLCHAIN: ${{ github.workspace }}/../jieli/toolchain
       JIELI_DOCKER: '1'          # the toolchain runs in a Debian container, as on a Mac
       # the FoMni commit the package is compared with (its update loader and boot head must match)
-      FOMNI_REF: 405ef41aef75f7e70afd6decc01505df07c708e9
+      FOMNI_REF: 6a0141152a4afd1eb7574c8d6be410f437b87633
     steps:
       - uses: actions/checkout@v7
 
