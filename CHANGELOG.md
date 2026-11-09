@@ -22,6 +22,11 @@ taken from its section below. Add the section in the same pull request as the `V
   took V15. It takes either now; the FM-1 accepts only the one its bootloader matches, so if one is
   refused, the page says to try the other (V15 is linked on the Internet Archive). The same button
   also takes an FM-1 back from M-VAVE's FM1 Open firmware.
+- **The web app with a keyboard or a screen reader:** every knob, button and key can be reached with Tab;
+  arrow keys turn a knob, Space or Enter holds a button or key, Shift+Enter keeps a button down. The app
+  speaks its screen as the FM-1 does, through your screen reader or its own voice (**Speak the screen**),
+  and a lit button says so. The single-key shortcuts only work while the panel has focus, and can be
+  turned off. There's a Mute button, and the text has more contrast.
 - **The web app on a phone:** at phone width the panel keeps its controls big enough to press, and
   scrolls sideways in its own box.
 

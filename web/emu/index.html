@@ -3,11 +3,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
 <style>
-:root { --ground: #faf4e8; --ink: #48392f; --muted: #8a7764; --rule: #e6dccb; --accent: #e0683a; --teal: #26a69a; --card: #fffaf1; color-scheme: light; }
+/* light: --muted, --accent-ink and --teal dark enough for 4.5:1 on the cream; --accent (the bright coral) fills buttons */
+:root { --ground: #faf4e8; --ink: #48392f; --muted: #6e5c4b; --rule: #e6dccb; --accent: #e0683a; --accent-ink: #b84a1e; --teal: #1b776e;
+        --card: #fffaf1; --focus: #1f6fd1; color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --ground: #1c1814; --ink: #f2e8d8; --muted: #b3a28e; --rule: #3a322a; --accent: #f28a5a; --teal: #4cc3b6; --card: #26201b; color-scheme: dark; }
+  :root:not([data-theme="light"]) { --ground: #1c1814; --ink: #f2e8d8; --muted: #b3a28e; --rule: #3a322a; --accent: #f28a5a; --accent-ink: #f28a5a; --teal: #4cc3b6; --card: #26201b; --focus: #79adff; color-scheme: dark; }
 }
-:root[data-theme="dark"] { --ground: #1c1814; --ink: #f2e8d8; --muted: #b3a28e; --rule: #3a322a; --accent: #f28a5a; --teal: #4cc3b6; --card: #26201b; color-scheme: dark; }
+:root[data-theme="dark"] { --ground: #1c1814; --ink: #f2e8d8; --muted: #b3a28e; --rule: #3a322a; --accent: #f28a5a; --accent-ink: #f28a5a; --teal: #4cc3b6; --card: #26201b; --focus: #79adff; color-scheme: dark; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 body { background: var(--ground); color: var(--ink); margin: 0; padding-inline: 16px; padding-block: 28px 48px;
        font: 400 16px/1.55 "Barlow", "Helvetica Neue", Arial, sans-serif; }
 main { max-width: 1040px; margin: 0 auto; }
@@ -15,7 +19,7 @@ header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1.2re
 h1 { font: 700 2rem/1.1 "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0; }
 header p { margin: 0; color: var(--muted); }
 header nav { margin-left: auto; display: flex; gap: 1rem; }
-a { color: var(--accent); }
+a { color: var(--accent-ink); }
 /* at phone width the drawn panel keeps its controls 24 px or more: it keeps a minimum width and scrolls
    sideways in its own box, not the page */
 .devicebox { overflow-x: auto; overscroll-behavior-x: contain; }
@@ -23,7 +27,7 @@ a { color: var(--accent); }
 .device svg { pointer-events: none; }
 .hit { position: absolute; touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px; }
 .hit.knob { cursor: ns-resize; border-radius: 50%; }
-.hit:focus-visible { outline: 2px solid #f28a5a; outline-offset: 2px; }
+.hit:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .device svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .device canvas { position: absolute; left: 31.8%; top: 9.6875%; width: 20%; height: 31.25%; image-rendering: pixelated; background: #000; border-radius: 2px; }
 .ctl { cursor: pointer; }
@@ -48,6 +52,10 @@ a { color: var(--accent); }
 .bar { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: center; margin: .9rem 0 0; color: var(--muted); font-size: .92rem; }
 .bar button { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: .3em .8em; cursor: pointer; }
 .bar .cpu { font-variant-numeric: tabular-nums; }
+.bar label { display: inline-flex; gap: .4rem; align-items: center; }
+.bar select { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: .2em .4em; }
+.said { margin: .6rem 0 0; min-height: 1.5em; color: var(--ink); font-weight: 600; }
+.said[hidden] { display: none; }
 .help h2 { font: 600 1.1rem "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0 0 .3rem; }
 .help { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem 2rem; margin: 1.6rem 0 0; }
 .help h2 { font: 600 1.1rem "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0 0 .3rem; }
@@ -62,7 +70,7 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
 .install h3 { font: 600 1.05rem "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0; display: inline; }
 .install p, .install ol { margin: .45rem 0; max-width: 72ch; }
 .install ol { padding-left: 1.3rem; color: var(--muted); }
-.install .warn { border-left: 3px solid var(--accent); padding: .35rem .7rem; background: var(--ground); border-radius: 0 8px 8px 0; }
+.install .warn { border-left: 3px solid var(--accent-ink); padding: .35rem .7rem; background: var(--ground); border-radius: 0 8px 8px 0; }
 .install .row { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center; margin: .7rem 0; }
 .install button { font: 600 1rem "Barlow Semi Condensed", "Barlow", sans-serif; letter-spacing: .02em; padding: .5em 1.1em; border-radius: 999px;
                   border: 1px solid var(--accent); background: var(--accent); color: #2a140a; cursor: pointer; }
@@ -86,16 +94,31 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
 
 <p class="turn">Turn your phone sideways for bigger controls.</p>
 <div class="devicebox">
+<h2 class="sr">The FM-1</h2>
 <div class="device" id="device">
-  <svg id="panel" viewBox="0 0 1000 640" role="application" aria-label="The FM-1: knobs, buttons, screen and keys"></svg>
-  <canvas id="screen" width="240" height="240" aria-label="The FM-1 screen"></canvas>
-  <div class="start" id="start"><button id="go">Switch on</button></div>
+  <svg id="panel" viewBox="0 0 1000 640" aria-hidden="true" focusable="false"></svg>
+  <canvas id="screen" width="240" height="240" role="img" aria-label="The FM-1's screen. Its words are read out: see Speak the screen, below the panel"></canvas>
+  <div id="controls" role="group" aria-label="The FM-1's panel" aria-describedby="panel-keys" inert></div>
+  <div class="start" id="start"><button id="go" type="button">Switch on</button></div>
 </div>
 </div>
+<p id="panel-keys" class="sr">Tab moves through the knobs, the buttons and the keys. Arrow keys turn a knob, Page Up and Page
+  Down faster. Space or Enter holds a button or key down while you hold it; Shift and Enter keeps a button down until you
+  press it again.</p>
+<p class="said" id="said" aria-live="polite" hidden></p>
 
 <div class="bar">
   <span id="status">Off. Sound starts when you switch it on.</span>
   <span class="cpu" id="cpu"></span>
+  <button id="mute" type="button" aria-pressed="false">Mute</button>
+  <label>Speak the screen
+    <select id="speak">
+      <option value="sr">with your screen reader</option>
+      <option value="voice">with this page's voice</option>
+      <option value="off">off</option>
+    </select></label>
+  <button id="where" type="button" title="Say everything on the screen now">Read the screen</button>
+  <label><input type="checkbox" id="shortcuts" checked> Keyboard shortcuts</label>
   <button id="midi" type="button" title="Play it from a MIDI keyboard (Chrome or Edge)">Connect MIDI</button>
   <span class="midi" id="midistat"></span>
   <button id="reset" type="button" title="Forget your sound and settings, and start again from the factory settings">Factory reset</button>
@@ -175,7 +198,12 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
       <li>White keys 1–8: <kbd>Q</kbd>–<kbd>I</kbd>, 9–16: <kbd>A</kbd>–<kbd>K</kbd>. Black keys 1–11: <kbd>1</kbd>–<kbd>0</kbd>, <kbd>-</kbd>.</li>
       <li><kbd>Space</kbd> freeze, <kbd>Enter</kbd> mute, <kbd>Esc</kbd> HOME, <kbd>Z</kbd> / <kbd>X</kbd> OCT− / OCT+, <kbd>↑</kbd> <kbd>↓</kbd> material.</li>
       <li><kbd>Shift</kbd>-click (or right-click) a button to hold it down.</li>
+      <li>The single-key shortcuts work while the panel or nothing else has focus; turn them off with <b>Keyboard shortcuts</b>.</li>
     </ul>
+  </div>
+  <div>
+    <h2>Screen reader and keyboard</h2>
+    <p>Every knob, button and key can be reached with <kbd>Tab</kbd>. Arrow keys turn a knob (<kbd>Page Up</kbd> / <kbd>Page Down</kbd> faster); <kbd>Space</kbd> or <kbd>Enter</kbd> holds a button or key while you hold it, and <kbd>Shift</kbd>+<kbd>Enter</kbd> keeps a button down. <b>Speak the screen</b> reads what the FM-1's screen says, the way the <a href="https://charlesvestal.github.io/fm1-reader/">FM-1 Screen Reader</a> reads a real FM-1: through your own screen reader, or with this page's voice. <b>Read the screen</b> says all of it again.</p>
   </div>
   <div>
     <h2>MIDI</h2>
@@ -217,7 +245,7 @@ function text(parent, x, y, s, size, fill = LABEL, weight = 600) {
 el("rect", { x: 4, y: 4, width: 992, height: 632, rx: 44, fill: BODY });
 const knobs = {};
 function knob(x, y, r, label, role) {
-  const g = el("g", { class: "ctl knob", tabindex: 0, role: "slider", "aria-label": label });
+  const g = el("g", { class: "ctl knob", tabindex: 0, role: role === "master" ? "slider" : "spinbutton", "aria-label": label });
   el("circle", { cx: x, cy: y, r: r + 5, fill: TRAY }, g);
   el("circle", { cx: x, cy: y, r, fill: KNOB, stroke: "#44474c", "stroke-width": 2 }, g);
   const ind = el("line", { x1: x, y1: y - r + 5, x2: x, y2: y - r + 15, stroke: LABEL, "stroke-width": 3, "stroke-linecap": "round" }, g);
@@ -234,11 +262,11 @@ for (let i = 0; i < 4; i++) knob(610 + i * 104, 100, 22, `KNOB${i + 1}`, ENC[`KN
 
 const buttons = {};
 function button(x, y, w, h, label, two) {
-  const g = el("g", { class: "ctl", role: "button", "aria-label": label });
+  const g = el("g", { class: "ctl", role: "button", tabindex: 0, "aria-label": label });
   el("rect", { x, y, width: w, height: h, rx: 9, fill: BTNC, stroke: "#4a4d52", "stroke-width": 1.5, class: "btnface" }, g);
   if (two) { text(g, x + w / 2, y + h / 2 - 1, label, 12); text(g, x + w / 2, y + h / 2 + 12, two, 12); }
   else text(g, x + w / 2, y + h / 2 + 5, label, 15);
-  buttons[label] = { g, bit: BTN[label] };
+  buttons[label] = { g, bit: BTN[label], name: label === "PLAY" ? "PLAY / STOP" : label };
 }
 el("rect", { x: 58, y: 258, width: 210, height: 58, rx: 14, fill: TRAY });
 button(72, 268, 82, 38, "OCT-"); button(170, 268, 82, 38, "OCT+");
@@ -255,12 +283,12 @@ const keys = [];
   el("rect", { x: x0, y: y0, width: w, height: h, rx: 18, fill: TRAY });
   const pitch = (w - 24) / 16, kw = pitch * 0.78;
   for (let i = 0; i < 16; i++) {
-    const g = el("g", { class: "ctl", role: "button", "aria-label": `white key ${i + 1}` });
+    const g = el("g", { class: "ctl", role: "button", tabindex: 0, "aria-label": `White key ${i + 1}` });
     el("rect", { x: x0 + 12 + i * pitch + (pitch - kw) / 2, y: y0 + h * 0.43, width: kw, height: h * 0.52, rx: kw / 2, fill: KEY_W, class: "keyface white" }, g);
     keys[WHITE_K[i]] = { g };
   }
   BLACK_AFTER.forEach((a, k) => {
-    const g = el("g", { class: "ctl", role: "button", "aria-label": `black key ${k + 1}` });
+    const g = el("g", { class: "ctl", role: "button", tabindex: 0, "aria-label": `Black key ${k + 1}` });
     el("rect", { x: x0 + 12 + (a + 1) * pitch - kw / 2, y: y0 + h * 0.06, width: kw, height: h * 0.33, rx: kw / 2, fill: KEY_B, class: "keyface black" }, g);
     keys[BLACK_K[k]] = { g };
   });
@@ -280,7 +308,7 @@ function hit(c, cls) {
   if (c.g.hasAttribute("aria-description")) { d.title = c.g.getAttribute("aria-description"); d.setAttribute("aria-description", d.title); }
   c.g.setAttribute("aria-hidden", "true");
   d.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
-  device.insertBefore(d, document.getElementById("start"));
+  document.getElementById("controls").appendChild(d);
   c.hit = d;
 }
 // what each control does, on hover (the Buttons list below says the same)
@@ -316,6 +344,30 @@ function syncKeys() {
   if (m !== keyMask) { keyMask = m; send({ type: "keys", mask: m }); }
   keys.forEach((k, i) => k.g.classList.toggle("held", !!(m & (1 << i))));
 }
+
+// a focused button or key: Space or Enter holds it while held (a screen reader's click: a short press);
+// Shift+Enter keeps a button down until pressed again
+function holdByKeyboard(hitEl, map, bit, sync, latchable) {
+  hitEl.addEventListener("keydown", (e) => {
+    if (e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.repeat) return;
+    if (latchable && e.key === "Enter" && e.shiftKey) { latched ^= 1 << bit; syncButtons(); return; }
+    map.set("f" + e.key, bit); sync();
+  });
+  hitEl.addEventListener("keyup", (e) => {
+    if (e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault(); e.stopPropagation();
+    if (map.delete("f" + e.key)) sync();
+  });
+  hitEl.addEventListener("click", (e) => {             // a screen reader's click comes without pointer or key events
+    if (e.detail !== 0 || map.size) return;
+    map.set("c", bit); sync();
+    setTimeout(() => { map.delete("c"); sync(); }, 120);
+  });
+}
+for (const b of Object.values(buttons)) holdByKeyboard(b.hit, btnHeldBy, b.bit, syncButtons, true);
+keys.forEach((k, i) => holdByKeyboard(k.hit, keyHeldBy, i, syncKeys, false));
 
 for (const b of Object.values(buttons)) {
   b.hit.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -359,6 +411,11 @@ device.addEventListener("lostpointercapture", pointerUp);
 
 function drawKnob(k) {
   k.ind.setAttribute("transform", `rotate(${k.angle} ${k.x} ${k.y})`);
+  if (k.role === "master" && k.hit) {
+    const pct = Math.round(100 * master / 4096);
+    k.hit.setAttribute("aria-valuemin", "0"); k.hit.setAttribute("aria-valuemax", "100");
+    k.hit.setAttribute("aria-valuenow", String(pct)); k.hit.setAttribute("aria-valuetext", `${pct} percent`);
+  }
 }
 function turn(k, n) {
   if (!n) return;
@@ -400,8 +457,8 @@ for (const k of Object.values(knobs)) {
     if (n) { wheel -= n * 25; turn(k, n); }
   }, { passive: false });
   k.hit.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowUp" || e.key === "ArrowRight") { turn(k, 1); e.preventDefault(); e.stopPropagation(); }
-    if (e.key === "ArrowDown" || e.key === "ArrowLeft") { turn(k, -1); e.preventDefault(); e.stopPropagation(); }
+    const n = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 5, PageDown: -5 }[e.key];
+    if (n) { turn(k, n); e.preventDefault(); e.stopPropagation(); }
   });
 }
 
@@ -412,8 +469,13 @@ const KEYMAP = {};
 KEYMAP.Minus = { key: BLACK_K[10] };
 Object.assign(KEYMAP, { Space: { btn: BTN.PLAY }, Enter: { btn: BTN.REC },
                         Escape: { btn: BTN.HOME }, KeyZ: { btn: BTN["OCT-"] }, KeyX: { btn: BTN["OCT+"] } });
+const shortcuts = document.getElementById("shortcuts");
+function shortcutsHere() {
+  const a = document.activeElement;
+  return shortcuts.checked && (!a || a === document.body || device.contains(a));
+}
 addEventListener("keydown", (e) => {
-  if (!node || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!node || e.metaKey || e.ctrlKey || e.altKey || !shortcutsHere()) return;
   if (e.code === "ArrowUp" || e.code === "ArrowDown") { turn(knobs.SELECT, e.code === "ArrowUp" ? 1 : -1); e.preventDefault(); return; }
   const m = KEYMAP[e.code];
   if (!m) return;
@@ -448,7 +510,14 @@ function drawScreen(fb) {
   ctx.putImageData(img, 0, 0);
 }
 function drawLights(b, k, d) {
-  for (const x of Object.values(buttons)) x.g.classList.toggle("lit", !!(b & (1 << x.bit)));
+  for (const x of Object.values(buttons)) {
+    const lit = !!(b & (1 << x.bit));
+    if (x.g.classList.contains("lit") !== lit || !x.named) {
+      x.hit.setAttribute("aria-label", lit ? `${x.name}, lit` : x.name);
+      x.named = true;
+    }
+    x.g.classList.toggle("lit", lit);
+  }
   keys.forEach((x, i) => {
     x.g.classList.toggle("lit", !!(k & (1 << i)));
     x.g.classList.toggle("dim", !(k & (1 << i)) && !!(d & (1 << i)));   // the middle of the kalimba
@@ -473,12 +542,13 @@ function saveStore(store) {
 
 // ---------------------------------------------------------------- switching on
 const status = document.getElementById("status"), cpu = document.getElementById("cpu");
+let audio = null;
 async function switchOn() {
   const go = document.getElementById("go");
   go.disabled = true;
   go.textContent = "Starting...";
   try {
-    const ac = new AudioContext({ sampleRate: 44100, latencyHint: "interactive" });
+    const ac = audio = new AudioContext({ sampleRate: 44100, latencyHint: "interactive" });
     const [wasm] = await Promise.all([fetch("kalimba.wasm").then((r) => { if (!r.ok) throw new Error(`kalimba.wasm: ${r.status}`); return r.arrayBuffer(); }),
                                       ac.audioWorklet.addModule("worklet.js")]);
     node = new AudioWorkletNode(ac, "kalimba", { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
@@ -492,6 +562,7 @@ async function switchOn() {
           drawLights(m.buttons, m.keys, m.dim);
           if (m.load !== undefined) cpu.textContent = `The firmware uses ${m.load}% of this computer's time`;
           if (m.store) saveStore(m.store);
+          if (m.said) heard(m.said);
         }
       };
     });
@@ -499,6 +570,8 @@ async function switchOn() {
     await ready;
     await ac.resume();
     document.getElementById("start").hidden = true;
+    document.getElementById("controls").inert = false;
+    readerHello();
     status.textContent = ac.sampleRate === 44100 ? "On." : `On (the browser runs audio at ${ac.sampleRate} Hz).`;
     syncButtons(); syncKeys();
   } catch (err) {
@@ -508,6 +581,45 @@ async function switchOn() {
   }
 }
 document.getElementById("go").addEventListener("click", switchOn);
+
+document.getElementById("mute").addEventListener("click", async (e) => {
+  if (!audio) return;
+  const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+  if (on) await audio.suspend(); else await audio.resume();
+});
+
+// ---------------------------------------------------------------- the screen in words
+// The page is a screen reader for the firmware, as fm1-reader is for an FM-1 on USB: it says HELLO every 2 s
+// (firmware/src/announce.c), and each SAY the firmware sends back is put in words (words.js and this build's
+// words file, in the module script below: window.fimbaSay) and given to your screen reader (a live region)
+// or the page's voice (the browser's own speech).
+const SR = [0x7D, 0x53, 0x52], speakSel = document.getElementById("speak");
+let helloT = null;
+function readerHello() {
+  clearInterval(helloT);
+  if (!node || speakSel.value === "off") return;
+  const hello = () => send({ type: "sysex", bytes: [...SR, 1, 1] });
+  hello();
+  helloT = setInterval(hello, 2000);
+}
+speakSel.addEventListener("change", () => {
+  if (speakSel.value === "off") send({ type: "sysex", bytes: [...SR, 2] });   // BYE
+  document.getElementById("said").hidden = speakSel.value === "off";
+  if (window.fimbaSay) window.fimbaSay(null);                                  // the mode changed: stop talking
+  readerHello();
+});
+document.getElementById("where").addEventListener("click", () => send({ type: "sysex", bytes: [...SR, 3] }));
+function heard(b) {                                    // whole F0..F7 frames
+  for (let i = 0; i < b.length; i++) {
+    if (b[i] !== 0xF0) continue;
+    let j = i + 1;
+    while (j < b.length && b[j] !== 0xF7) j++;
+    if (b[i + 1] === SR[0] && b[i + 2] === SR[1] && b[i + 3] === SR[2] && b[i + 4] === 16 && window.fimbaSay)
+      window.fimbaSay(String.fromCharCode(...b.slice(i + 6, j)), b[i + 5], speakSel.value);
+    i = j;
+  }
+}
 
 // ---------------------------------------------------------------- Web MIDI in
 const midiStat = document.getElementById("midistat");
@@ -543,6 +655,36 @@ document.getElementById("reset").addEventListener("click", () => {
     document.getElementById("reset").textContent = "Click again to forget everything";
   }
 });
+</script>
+
+<script type="module">
+/* the screen in words: fm1-reader's words.js and this build's words file (web/words/, inlined at build time by
+   web/emu/inline_lib.py), then your screen reader (the live region #said) or the browser's own voice. A SAY with
+   flag 1 cuts off what is being said; flag 2 (a warning) is heard whole. */
+/*WORDSLIB*/
+const saidEl = document.getElementById("said");
+const words = (() => { try { return wordsOf(WORDS_FILE); } catch { return []; } })();
+let keep = false;                                      /* a warning is being spoken: not cut off */
+window.fimbaSay = (text, flags = 0, mode = "sr") => {
+  const voice = globalThis.speechSynthesis;
+  if (text === null) { if (voice) voice.cancel(); saidEl.textContent = ""; return; }
+  const t = spoken(text, words);
+  if (mode === "off") return;
+  if (mode === "voice" && voice) {
+    if ((flags & 1) && !(keep && voice.speaking)) voice.cancel();
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = "en";
+    keep = !!(flags & 2);
+    voice.speak(u);
+    saidEl.removeAttribute("aria-live");               /* shown, not read again by a screen reader */
+    saidEl.textContent = t;
+    return;
+  }
+  saidEl.setAttribute("aria-live", flags & 2 ? "assertive" : "polite");
+  saidEl.textContent = "";                             /* the same words twice are still read */
+  setTimeout(() => { saidEl.textContent = t; }, 30);
+};
+saidEl.hidden = false;
 </script>
 
 <script type="module">
