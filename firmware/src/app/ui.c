@@ -119,9 +119,24 @@ static struct {
     uint8_t midi_note[NKEYS][4];
 } ui;
 
-static void say(const char *a, const char *b)
+static uint8_t sp_said;                 /* a message went to the screen reader this frame: speak() leaves it be */
+static void msg_text(const char *a, const char *b, char *t)   /* the message as a reader says it: "a b" */
+{
+    uint32_t i, k = 0;
+    for (i = 0; i < 23u && a && a[i]; i++)
+        t[k++] = a[i];
+    if (b && b[0])
+        t[k++] = ' ';
+    for (i = 0; i < 23u && b && b[i]; i++)
+        t[k++] = b[i];
+    while (k && t[k - 1] == '.')               /* "UPDATE MODE IN 3..": the dots are for the eye */
+        k--;
+    t[k] = 0;
+}
+static void say_as(const char *a, const char *b, uint32_t flags)
 {
     uint32_t i;
+    char t[48];
     for (i = 0; i < 23u && a && a[i]; i++)
         ui.msg[0][i] = a[i];
     ui.msg[0][i] = 0;
@@ -129,7 +144,15 @@ static void say(const char *a, const char *b)
         ui.msg[1][i] = b[i];
     ui.msg[1][i] = 0;
     ui.msg_until = plat_ms() + 1300u;
+    if (ann_on()) {                            /* and to a screen reader (announce.c) */
+        msg_text(a, b, t);
+        ann_say(t, 0, flags);
+        sp_said = 1;
+    }
 }
+static void say(const char *a, const char *b) { say_as(a, b, ANN_NOW); }
+/* something did not happen: a screen reader says it whole (what follows does not cut it off) */
+static void warn(const char *a, const char *b) { say_as(a, b, ANN_NOW | ANN_KEEP); }
 void ui_say(const char *a, const char *b) { say(a, b); }
 int ui_dirty(void) { return ui.dirty != 0; }
 
@@ -205,7 +228,7 @@ static void turn(int role, int k, int32_t e)
     if (!e || k == K_NONE)
         return;
     if (knob_off(k)) {
-        say("NO HOLE", "BOX OR GOURD");
+        warn("NO HOLE", "BOX OR GOURD");
         return;
     }
     knob_set(k, proj.par[k] + accel(role, e, p->hi - p->lo));
@@ -473,7 +496,7 @@ static void button(int b)
             ui.dirty = 0;
             say("SAVED", 0);
         } else {
-            say("NOT SAVED", "FLASH ERROR");
+            warn("NOT SAVED", "FLASH ERROR");
         }
         break;
     default: break;
@@ -1026,6 +1049,202 @@ static void autosave(void)
         ui.dirty = 0;
 }
 
+/* ------------------------------------------------------ screen reader --- */
+/* The screen as text for a screen reader on the computer (announce.c; fm1-reader): a page once it settles,
+ * with its knobs; a knob's value as it turns (or an encoder, or MIDI); what a button or key did (say).
+ * WHERE (the reader asks, or it has just started listening) is everything on the screen, the header too.
+ * The tines themselves are not said: they are what you hear. Nothing is built while no reader listens. */
+static struct {
+    uint32_t ctx;                              /* the page (and the layout, for the Keys page), hashed */
+    int16_t val[P_NPARAMS];
+    uint8_t started;
+} sp OM_POOL;
+static char sp_buf[ANN_MAX + 1] OM_POOL;
+static uint32_t sp_n;
+
+static void sp_cat(const char *s)
+{
+    while (*s && sp_n < ANN_MAX)
+        sp_buf[sp_n++] = *s++;
+    sp_buf[sp_n] = 0;
+}
+static void sp_knob(int k)                     /* "Decay 60", "Material Steel"; a greyed knob says why */
+{
+    char t[16];
+    sp_cat(km_param_info(k)->name);
+    if (knob_off(k)) {
+        sp_cat(" off, no sound hole");
+        return;
+    }
+    sp_cat(" ");
+    km_param_text(k, proj.par[k], t);
+    sp_cat(t);
+}
+
+/* the page: its name, and its knobs; all: the header too (the key and scale, or the transpose; the chips) */
+static void sp_screen(int all)
+{
+    char t[16];
+    int i, n = 0;
+    sp_n = 0;
+    sp_buf[0] = 0;
+    sp_cat(VIEW_NAME[ui.view]);
+    sp_cat(" page");                           /* "Tine page": the page, not the parameter */
+    for (i = 0; i < 4; i++)
+        if (view_knob(i) != K_NONE) {
+            sp_cat(n++ ? ", " : ": ");
+            sp_knob(view_knob(i));
+        }
+    if (!all)
+        return;
+    sp_cat(". ");
+    if (keyboard()) {
+        sp_cat("Keyboard");
+        if (proj.par[P_TRANSPOSE]) {
+            km_param_text(P_TRANSPOSE, proj.par[P_TRANSPOSE], t);
+            sp_cat(" ");
+            sp_cat(t);
+        }
+    } else {
+        km_param_text(P_KEY, proj.par[P_KEY], t);
+        sp_cat(t);
+        sp_cat(" ");
+        km_param_text(P_SCALE, proj.par[P_SCALE], t);
+        sp_cat(t);
+    }
+    if (ui.frozen)
+        sp_cat(". Grains frozen");
+    if (ui.pat_on)
+        sp_cat(". Pattern on");
+    if (proj.par[P_RELEASE])
+        sp_cat(". Damp");
+}
+
+static uint32_t sp_ctx_sig(void) { return hash(hash(2166136261u, ui.view), ui.view == V_KEYS ? (uint32_t)keyboard() : 0u); }
+static void sp_snap(void)
+{
+    int i;
+    for (i = 0; i < P_NPARAMS; i++)
+        sp.val[i] = proj.par[i];
+}
+
+static void speak(void)
+{
+    uint32_t now = plat_ms(), c;
+    int where = ann_where(), i, changed = -1;
+    if (!ann_on()) {
+        sp.started = 0;
+        sp_said = 0;
+        return;
+    }
+    if (!sp.started || where) {                       /* everything on the screen */
+        sp.started = 1;
+        sp.ctx = sp_ctx_sig();
+        sp_snap();
+        sp_screen(1);
+        ann_say(sp_buf, 0, ANN_NOW);
+        sp_said = 0;
+        return;
+    }
+    if (sp_said) {                                    /* a button said what it did (and what it changed) */
+        sp_said = 0;
+        sp_snap();
+        sp.ctx = sp_ctx_sig();
+        return;
+    }
+    c = sp_ctx_sig();
+    if (c != sp.ctx) {                                /* a new page: said when it settles */
+        sp.ctx = c;
+        sp_snap();
+        sp_screen(0);
+        ann_later(sp_buf, ANN_NOW, 200u, now);
+        return;
+    }
+    for (i = 0; i < P_NPARAMS; i++)                   /* a knob turning (or MIDI moving one) */
+        if (proj.par[i] != sp.val[i]) {
+            sp.val[i] = proj.par[i];
+            if (changed < 0)
+                changed = i;
+        }
+    if (changed >= 0) {
+        sp_n = 0;
+        sp_knob(changed);
+        ann_later(sp_buf, ANN_NOW, 120u, now);
+    }
+}
+
+#ifdef OM_HOST
+/* every page, knob value and message as a screen reader gets them (the "speakdump" command):
+ * KIND <tab> the text sent (fm1-reader/tools/audit.mjs puts it in words with web/words/ and checks it) */
+static void sp_print(const char *kind, const char *t) { printf("%s\t%s\n", kind, t); }
+static void speak_dump(void)
+{
+    static const char *const MSG[][2] = {{"UPDATE MODE IN", "3.."}, {"UPDATE MODE", "CANCELLED"}};
+    uint8_t keep_view = ui.view, keep_frozen = ui.frozen, keep_pat = ui.pat_on;
+    project_t keep = proj;
+    int v, lay, i, x, k;
+    for (lay = 0; lay < LAY_N; lay++) {
+        proj.par[P_LAYOUT] = (int16_t)lay;
+        for (v = 0; v < NVIEWS; v++) {
+            if (lay && v != V_KEYS)                   /* (only the Keys page follows the layout) */
+                continue;
+            ui.view = (uint8_t)v;
+            sp_screen(0);
+            sp_print("SCREEN", sp_buf);
+            for (i = 0; i < 4; i++) {
+                const km_param_t *p;
+                if ((k = view_knob(i)) == K_NONE || k == P_LAYOUT)
+                    continue;
+                p = km_param_info(k);
+                for (x = p->lo; x <= p->hi; x++) {
+                    proj.par[k] = (int16_t)x;
+                    sp_n = 0;
+                    sp_knob(k);
+                    sp_print("KNOB", sp_buf);
+                }
+                proj = keep;
+                proj.par[P_LAYOUT] = (int16_t)lay;
+            }
+        }
+    }
+    proj = keep;
+    for (x = 0; x < LAY_N; x++) {                    /* (Layout itself, once) */
+        proj.par[P_LAYOUT] = (int16_t)x;
+        sp_n = 0;
+        sp_knob(P_LAYOUT);
+        sp_print("KNOB", sp_buf);
+    }
+    proj = keep;
+    for (x = 0; x < BODY_N; x++) {
+        proj.par[P_BODY] = (int16_t)x;
+        if (!km_body_hole(x)) {
+            sp_n = 0;
+            sp_knob(P_WAH);
+            sp_print("KNOB", sp_buf);
+            break;
+        }
+    }
+    proj = keep;
+    ui.view = V_TINE;
+    for (x = 0; x < 8; x++) {                         /* WHERE: Tine or Keyboard, transposed; the chips */
+        proj.par[P_LAYOUT] = (int16_t)(x & 1 ? LAY_KEYBOARD : LAY_TINE);
+        proj.par[P_TRANSPOSE] = (int16_t)(x & 2 ? 2 : 0);
+        proj.par[P_RELEASE] = (int16_t)(x >> 2 & 1);
+        ui.frozen = ui.pat_on = (uint8_t)(x >> 2 & 1);
+        sp_screen(1);
+        sp_print("WHERE", sp_buf);
+    }
+    proj = keep;
+    ui.frozen = keep_frozen;
+    ui.pat_on = keep_pat;
+    for (i = 0; i < (int)(sizeof MSG / sizeof MSG[0]); i++) {   /* main_fm1.c's (not in the simulator) */
+        msg_text(MSG[i][0], MSG[i][1], sp_buf);
+        sp_print("MSG", sp_buf);
+    }
+    ui.view = keep_view;
+}
+#endif
+
 void ui_init(void)
 {
     memset(&ui, 0, sizeof ui);
@@ -1041,6 +1260,8 @@ void ui_frame(void)
     draw_main();
     draw_knobs();
     leds();
+    speak();
+    ann_tick(plat_ms());
     ui.frame++;
 }
 
