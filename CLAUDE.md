@@ -58,11 +58,12 @@ The steps for every GitHub issue or new feature, from the first look to the rele
 
 ## 7. Release (automatic)
 
-- Merging to `main` with a new `VERSION` releases it, all in that one run: the release build, the tag
-  `vX.Y.Z`, the GitHub Release with the CHANGELOG section, and the site at
+- Merging to `main` with a new `VERSION` releases it, all in that one run: the release build (the
+  `attested` job's, by the shared FM-1 builder, its attestation verified), the tag `vX.Y.Z`, the GitHub
+  Release with the CHANGELOG section, and the site at
   https://jadamsowers.github.io/fm1-fimba/ with the new firmware in its installer.
 - Never push tags by hand, never create releases with `gh release create`, and never re-run the
   Pages job. GitHub Pages keeps only the first deployment of a commit, and a tag pushed by a run
   starts no other run.
-- Afterwards, check: `gh release view vX.Y.Z`, and
+- Afterwards, check: `gh release view vX.Y.Z`, `gh attestation verify` on its `.fwsc` (BUILDING.md), and
   `curl -s https://jadamsowers.github.io/fm1-fimba/firmware/latest.json` shows the new version.

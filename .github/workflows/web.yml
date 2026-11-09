@@ -6,11 +6,14 @@
 #   push to main      the same, then the browser version published to
 #                     https://jadamsowers.github.io/fm1-fimba/, with the latest release's firmware
 #                     beside it for the page's installer (firmware/latest.json)
+#   every run         the shared FM-1 builder (zvenson/fm1-build@v1) builds the package too, runs the tests
+#                     and signs its build provenance (an attestation): The Firmware Hub shows such packages
+#                     as built from source. A pull request proves that build works before it's merged.
 #   a new VERSION     a push to main whose VERSION has no tag yet is a release: a release build
 #                     (identity FM-1_8XXYYZZ, version on the splash and the Setup page), the commit
-#                     tagged vX.Y.Z and published as a GitHub Release with the .fwsc, the one-file web
-#                     app and its CHANGELOG.md section, and the site published with that firmware in its
-#                     installer, all in this one run. (A tag pushed by a run starts no other run, and
+#                     tagged vX.Y.Z and published as a GitHub Release with the attested .fwsc, the
+#                     one-file web app and its CHANGELOG.md section, and the site published with that
+#                     firmware in its installer, all in this one run. (A tag pushed by a run starts no other run, and
 #                     Pages keeps only the first deployment of a commit: the release can't be a
 #                     second run.)
 name: Test, build and publish
@@ -125,6 +128,11 @@ jobs:
       - name: Python packages
         run: python3 -m pip install --quiet -r requirements.txt
 
+      - name: Pillow's raqm layout (the fonts' tabular figures), as the attested build has it
+        run: |
+          sudo apt-get install -y -qq libfribidi0
+          python3 -c "from PIL import features; assert features.check('raqm'), 'Pillow without raqm'"
+
       - name: JieLi toolchain (JieLi's server, else the same package from a Docker image)
         run: sh tools/get_toolchain.sh "$(dirname "$JIELI_TOOLCHAIN")"
 
@@ -162,6 +170,38 @@ jobs:
           path: |
             build/fimba*.fwsc
             build/fimba.bin
+
+  attested:
+    name: Attested build
+    needs: version
+    # the shared FM-1 builder, at the tag The Firmware Hub has reviewed: it checks out this commit, installs
+    # JieLi's toolchain and the AC79 SDK at a fixed tag, runs the commands below and signs provenance for the
+    # package (its "packages" download). On a release its package is the one published.
+    uses: zvenson/fm1-build/.github/workflows/build.yml@v1
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    with:
+      sdk: true
+      tests-block: true
+      build: |
+        set -euo pipefail
+        python3 -m pip install --quiet -r requirements.txt
+        sudo apt-get install -y -qq libfribidi0          # Pillow's raqm: the fonts as the firmware job has them
+        python3 -c "from PIL import features; assert features.check('raqm'), 'Pillow without raqm'"
+        ver='${{ needs.version.outputs.release }}'
+        mkdir -p build/release-assets
+        if [ -n "$ver" ]; then
+          python3 tools/build.py --release "$ver"
+          cp "build/fimba-$ver.fwsc" build/release-assets/
+          cp "build/fimba-$ver.fwsc" build/fimba.fwsc      # (the tests check the update path against build/fimba.fwsc)
+        else
+          python3 tools/build.py
+          cp build/fimba.fwsc build/release-assets/
+        fi
+      test: sh tests/run_tests.sh
+      packages: build/release-assets/*.fwsc
 
   pages:
     name: Publish the web app (and its installer's firmware) to GitHub Pages
@@ -226,16 +266,33 @@ jobs:
   release:
     name: GitHub Release
     if: needs.version.outputs.release != ''
-    needs: [version, web, firmware]
+    needs: [version, web, firmware, attested]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      attestations: read
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
           path: dist
+
+      - name: The attested package, checked
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ needs.version.outputs.release }}
+        run: |
+          pkg=$(find dist/packages -name "fimba-$VER.fwsc" | head -1)
+          [ -n "$pkg" ] || { echo "::error::no attested fimba-$VER.fwsc"; exit 1; }
+          gh attestation verify "$pkg" --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow zvenson/fm1-build/.github/workflows/build.yml
+          python3 tools/check_fwsc.py "$pkg"
+          cmp -s "$pkg" "dist/fimba-firmware/fimba-$VER.fwsc" ||
+            echo "::warning::the attested package differs from the firmware job's (checked against FoMni's): look before trusting either"
+          mkdir -p out
+          cp "$pkg" "out/fimba-$VER.fwsc"
+          (cd out && sha256sum "fimba-$VER.fwsc" > SHA256SUMS)
 
       - name: Tag this commit and create the release
         env:
@@ -246,4 +303,4 @@ jobs:
             awk -v v="$VER" '$0 == "## " v {f = 1; next} /^## / {f = 0} f' CHANGELOG.md | sed '/./,$!d'
             echo; sed "s/VERSION/$VER/g" .github/release-notes.md; } > notes.md
           gh release create "v$VER" --target "$GITHUB_SHA" --title "FiMba-1 $VER (beta)" --notes-file notes.md \
-            --prerelease dist/fimba-firmware/fimba-"$VER".fwsc dist/FiMba-1-web/FiMba-1.html
+            --prerelease out/fimba-"$VER".fwsc out/SHA256SUMS dist/FiMba-1-web/FiMba-1.html
