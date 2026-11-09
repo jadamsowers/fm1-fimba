@@ -512,7 +512,7 @@ a pull request's build) and press **Install this file**. Under **Back to the sto
 M-VAVE's own FM-1 V16 or V15 file; it's checked (SHA-256) before anything is written (the FM-1 takes
 only the version whose bootloader it has: if one is refused, choose the other). The same button takes
 an FM-1 back from M-VAVE's FM1 Open firmware. M-VAVE's own updater, M-UPGRADE 3.11, finds FiMba-1
-0.6.2 and later. An interrupted install picks up where it stopped when you press Install again.
+0.7.0 and later. An interrupted install picks up where it stopped when you press Install again.
 
 The site is rebuilt and published by GitHub Actions whenever a change reaches `main`. Every pull
 request is built and tested first ([below](#continuous-integration)). To build it yourself (needs

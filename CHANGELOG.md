@@ -4,7 +4,7 @@ A release is a push to `main` that changes `VERSION` to a version with no tag ye
 release build, tags the commit `vX.Y.Z` and publishes the GitHub Release with that version's notes,
 taken from its section below. Add the section in the same pull request as the `VERSION` change.
 
-## 0.6.2
+## 0.7.0
 
 - **Works with the newer FM-1s:** units sold since autumn 2026 (mostly on AliExpress) have a
   different flash chip, the UC25HQ80. FiMba-1 didn't know it, so on those units nothing was saved
