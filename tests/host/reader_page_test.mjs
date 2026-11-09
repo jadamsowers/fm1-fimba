@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The emulator's screen reader and keyboard access (build/emu/FiMba-1.html, from file:// in headless Chrome): the
 // panel is inert until switched on; then the screen is said in words (the live region), a button held from the
-// keyboard (Space on its target) changes the page and the new page is said, MASTER has a value, a lit button says so.
+// keyboard (Space on its target) changes the page and the new page is said, MASTER has a value, a lit button says so,
+// and muted, a knob turned from the keyboard is still said (Mute must not stop the firmware).
 //   node tests/host/reader_page_test.mjs CHROME   (exit 0: all of that happened)
 import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync, rmSync } from "node:fs";
@@ -35,6 +36,13 @@ const PROBE = `<script>
     env.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
     for (let i = 0; i < 30 && !said().includes("Body page"); i++) await wait(100);
     if (!said().includes("Body page")) fails.push("page from the keyboard not said: " + JSON.stringify(said()));
+    // muted, the firmware keeps running: a knob turned from the keyboard is still said
+    document.getElementById("mute").click();
+    const k1 = hits.find((h) => h.getAttribute("aria-label") === "KNOB2");
+    k1.focus();
+    k1.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    for (let i = 0; i < 30 && !said().includes("Buzz 1"); i++) await wait(100);
+    if (!said().includes("Buzz 1")) fails.push("muted: a knob not said: " + JSON.stringify(said()));
     out(fails.length ? "FAIL " + fails.join("; ") : "ok said=" + said());
   } catch (e) { out("FAIL " + e); }
 })();

@@ -542,7 +542,7 @@ function saveStore(store) {
 
 // ---------------------------------------------------------------- switching on
 const status = document.getElementById("status"), cpu = document.getElementById("cpu");
-let audio = null;
+let audio = null, outGain = null;
 async function switchOn() {
   const go = document.getElementById("go");
   go.disabled = true;
@@ -552,7 +552,8 @@ async function switchOn() {
     const [wasm] = await Promise.all([fetch("kalimba.wasm").then((r) => { if (!r.ok) throw new Error(`kalimba.wasm: ${r.status}`); return r.arrayBuffer(); }),
                                       ac.audioWorklet.addModule("worklet.js")]);
     node = new AudioWorkletNode(ac, "kalimba", { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
-    node.connect(ac.destination);
+    outGain = ac.createGain();                     /* Mute: the gain to 0 (the worklet, so the firmware, keeps running) */
+    node.connect(outGain).connect(ac.destination);
     const ready = new Promise((res) => {
       node.port.onmessage = (e) => {
         const m = e.data;
@@ -582,11 +583,10 @@ async function switchOn() {
 }
 document.getElementById("go").addEventListener("click", switchOn);
 
-document.getElementById("mute").addEventListener("click", async (e) => {
-  if (!audio) return;
+document.getElementById("mute").addEventListener("click", (e) => {
   const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
   e.currentTarget.setAttribute("aria-pressed", String(on));
-  if (on) await audio.suspend(); else await audio.resume();
+  if (outGain) outGain.gain.value = on ? 0 : 1;
 });
 
 // ---------------------------------------------------------------- the screen in words
