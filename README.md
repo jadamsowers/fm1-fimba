@@ -566,7 +566,7 @@ or install the latest one straight from the [web page](https://jadamsowers.githu
 
 ### Continuous integration and releases
 
-`.github/workflows/web.yml` has two build jobs:
+`.github/workflows/web.yml` has three build jobs:
 
 - **Tests and the web app**, in the official Emscripten container: the full test suite, then the
   browser version.
@@ -577,14 +577,18 @@ or install the latest one straight from the [web page](https://jadamsowers.githu
   - It builds FoMni's own package at a pinned commit and checks that everything but the app is
     byte-identical (`tools/check_fwsc.py`).
   - It runs the update-loader, OTA-entry and installer tests against the package.
+- **Attested build**, by the shared FM-1 builder ([`zvenson/fm1-build`](https://github.com/zvenson/fm1-build)
+  at `v1`, the tag The Firmware Hub has reviewed): it builds the package from the same commit with
+  JieLi's own toolchain and SDK, runs the tests, and signs a record of where the package came from (an
+  attestation). A release publishes this package, and The Firmware Hub shows it as built from source.
 
 When each part runs:
 
 | When                                     | What happens                                                                                                                                                                                                                                                                |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A pull request                           | Both jobs; the firmware (`fimba-firmware`) and the one-file web app (`FiMba-1-web`) can be downloaded from the run to try before merging                                                                                                                                    |
-| A push to `main` (a merged pull request) | Both jobs, then the browser version is published to GitHub Pages, with the latest release's firmware beside it for the page's installer                                                                                                                                     |
-| A push to `main` with a new `VERSION`    | A release, in the same run: a release build (the version shows on the splash screen and the Setup page, and the package identity is FM-1_8XXYYZZ), the commit tagged `vX.Y.Z`, a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with `fimba-X.Y.Z.fwsc`, `FiMba-1.html` and the notes from `CHANGELOG.md`, and the site's installer moved to it |
+| A pull request                           | All three jobs; the firmware (`fimba-firmware`) and the one-file web app (`FiMba-1-web`) can be downloaded from the run to try before merging                                                                                                                                    |
+| A push to `main` (a merged pull request) | All three jobs, then the browser version is published to GitHub Pages, with the latest release's firmware beside it for the page's installer                                                                                                                                     |
+| A push to `main` with a new `VERSION`    | A release, in the same run: a release build (the version shows on the splash screen and the Setup page, and the package identity is FM-1_8XXYYZZ), the commit tagged `vX.Y.Z`, a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with the attested `fimba-X.Y.Z.fwsc` (its attestation verified first), `FiMba-1.html` and the notes from `CHANGELOG.md`, and the site's installer moved to it |
 
 To make a release, put the new version in `VERSION` and its notes under a `## X.Y.Z` heading in
 `CHANGELOG.md`, in the pull request (its checks fail if the notes are missing), and merge it. Don't

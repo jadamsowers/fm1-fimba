@@ -150,3 +150,18 @@ CI releases: set `VERSION` to the new X.Y.Z, add its `## X.Y.Z` section to `CHAN
 merge to `main`. That run builds the release (the identity, FM-1_8XXYYZZ, is what the installer
 checks), tags the commit and publishes the GitHub Release and the site. `./build.sh --release X.Y.Z`
 makes the same release build locally.
+
+The package a release publishes is built by the shared FM-1 builder,
+[`zvenson/fm1-build` at `v1`](https://github.com/zvenson/fm1-build/tree/v1) (the `attested` job), as X0X,
+FoMni and others do. It checks out the commit, installs JieLi's Linux toolchain and the AC79 SDK at its
+fixed tag, runs `tools/build.py --release X.Y.Z` and `tests/run_tests.sh` (a failing test stops the
+release), and signs build provenance for the package. The release job verifies that signature and the
+package's CRCs, and warns if the package isn't byte-identical to the firmware job's (the one compared
+with FoMni's). The Firmware Hub shows such packages as built from source.
+
+To check a downloaded package yourself (GitHub CLI, signed in):
+
+```sh
+gh attestation verify fimba-X.Y.Z.fwsc --repo jadamsowers/fm1-fimba \
+  --signer-workflow zvenson/fm1-build/.github/workflows/build.yml
+```

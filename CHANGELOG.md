@@ -22,6 +22,9 @@ taken from its section below. Add the section in the same pull request as the `V
   took V15. It takes either now; the FM-1 accepts only the one its bootloader matches, so if one is
   refused, the page says to try the other (V15 is linked on the Internet Archive). The same button
   also takes an FM-1 back from M-VAVE's FM1 Open firmware.
+- **Built from source, and signed:** the release's firmware is built on GitHub by the shared FM-1
+  builder, which signs a record of where it came from. The Firmware Hub shows it as built from source,
+  and anyone can check a downloaded package (`gh attestation verify`, in the release notes).
 - **The web app with a keyboard or a screen reader:** every knob, button and key can be reached with Tab;
   arrow keys turn a knob, Space or Enter holds a button or key, Shift+Enter keeps a button down. The app
   speaks its screen as the FM-1 does, through your screen reader or its own voice (**Speak the screen**),
