@@ -40,6 +40,7 @@ done
 # identity to the one with 01, older builds, M-VAVE's firmware, the loader
 if command -v node >/dev/null 2>&1; then
     run installer-hs node tests/host/installer_hs_test.mjs
+    run page-scripts python3 tests/page_script_test.py   # the page's scripts parse, the installer's modules inlined
 fi
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
 if [ -f build/fimba.fwsc ]; then
