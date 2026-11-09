@@ -1,25 +1,26 @@
 # FiMba-1: a kalimba for the M-VAVE FM-1
 
-FiMba-1 is custom firmware that turns the **M-VAVE FM-1**, a palm-sized FM synthesizer, into a
-**kalimba** (thumb piano). The name hides the FM-1 inside the word kalimba (Fi·M·ba), the way
+FiMba-1 is custom firmware that turns your **M-VAVE FM-1**, a palm-sized FM synthesizer, into a
+**kalimba**, the thumb piano. The name hides the FM-1 inside the word kalimba (Fi·M·ba), the way
 FoMni, the firmware it grew from, hides FM inside Omnichord.
 
-**▶ Play it in your browser: <https://jadamsowers.github.io/fm1-fimba/>** (no FM-1 needed: the
-firmware's own C code compiled to WebAssembly, with mouse, touch, computer keyboard and MIDI input).
+**▶ Play it in your browser: <https://jadamsowers.github.io/fm1-fimba/>** You don't need an FM-1. It's
+the firmware's own C code compiled to WebAssembly, and you can play it with a mouse, a touch screen, your
+computer keyboard or MIDI.
 
 ![The tines ringing](docs/img/ringing.png) ![A pattern running](docs/img/pattern_running.png) ![The Color page](docs/img/color_on.png)
 
-The 16 white keys are tines laid out as a real kalimba's are, with the lowest note in the middle.
-The 11 black keys play thumb-roll chords, a chromatic second row, or performance moves. Each tine
-is a physical model of a metal (or bamboo, or glass) bar. It sits on a body you can choose, with a
-sound hole you can cover for the kalimba "wah" and buzzers like an mbira's. Behind that come a
-granular cloud, a ping-pong delay, a plate reverb, tape and lo-fi colour, a chorus and a filter.
-Mbira-style patterns can play over the chords you choose.
+The 16 white keys are tines, laid out as on a real kalimba, with the lowest note in the middle. The 11
+black keys play thumb-roll chords, a chromatic second row, or performance moves. Each tine is a
+physical model of a metal bar (or a bamboo or glass one). It sits on a body you choose, with a sound
+hole you can cover for the kalimba's "wah" and buzzers like an mbira's. Behind that are a granular
+cloud, a ping-pong delay, a plate reverb, tape and lo-fi colour, a chorus and a filter. Mbira-style
+patterns can play over the chords you pick.
 
 > **Status: beta.** FiMba-1 runs on the FM-1. It's installed and playing on real hardware, put there
-> with the page's own web updater. Custom firmware is still installed at your own risk: the package
-> is built so that the chip's own update mode can't be overwritten, the firmware falls back to a safe
-> mode if it can't start, and the stock firmware can always go back on; see
+> with the page's own web updater. Installing custom firmware is still at your own risk, though it's
+> hard to get stuck. The package can't overwrite the chip's own update mode, the firmware falls back
+> to a safe mode if it can't start, and you can always put the stock firmware back. See
 > [Installing safely](#installing-safely).
 
 ---
@@ -36,6 +37,7 @@ Mbira-style patterns can play over the chords you choose.
   - [The pages and their knobs](#the-pages-and-their-knobs)
   - [The screen](#the-screen)
   - [MIDI](#midi)
+  - [Screen reader](#screen-reader)
 - [How the kalimba works](#how-the-kalimba-works)
 - [The browser version](#the-browser-version)
 - [Building, testing, installing](#building-testing-installing)
@@ -138,195 +140,195 @@ M-VAVE, Hügelton Instruments, Charles Vestal or Baudgirl.
 
 ### Keys
 
-What the keys do depends on the **Layout** (Keys page).
+What the keys do depends on the **Layout**, on the Keys page.
 
-**Tine layout** (the default) is a 17-key kalimba in C, laid out as on the instrument. The lowest
+The **Tine** layout, the default, is a 17-key kalimba in C, laid out as on the instrument. The lowest
 tine is just right of the middle, and the scale alternates outward: left, right, left, right. Each
 thumb gets every other note, and thirds sit side by side. It's the 17-key kalimba's D6 … C4 … C6,
 without its top E6.
 
-**Mirror** is the same kalimba flipped: the lowest tine sits just left of the middle and the next
-note is to its right.
+**Mirror** is the same kalimba flipped. The lowest tine sits just left of the middle, and the next
+note is on its right.
 
-| White key  | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8      | 9      | 10  | 11  | 12  | 13  | 14  | 15  | 16  |
-| ---------- | --- | --- | --- | --- | --- | --- | --- | ------ | ------ | --- | --- | --- | --- | --- | --- | --- |
-| Tine, C    | D6  | B5  | G5  | E5  | C5  | A4  | F4  | D4     | **C4** | E4  | G4  | B4  | D5  | F5  | A5  | C6  |
-| Mirror, C  | C6  | A5  | F5  | D5  | B4  | G4  | E4  | **C4** | D4     | F4  | A4  | C5  | E5  | G5  | B5  | D6  |
+| White key | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8      | 9      | 10  | 11  | 12  | 13  | 14  | 15  | 16  |
+| --------- | --- | --- | --- | --- | --- | --- | --- | ------ | ------ | --- | --- | --- | --- | --- | --- | --- |
+| Tine, C   | D6  | B5  | G5  | E5  | C5  | A4  | F4  | D4     | **C4** | E4  | G4  | B4  | D5  | F5  | A5  | C6  |
+| Mirror, C | C6  | A5  | F5  | D5  | B4  | G4  | E4  | **C4** | D4     | F4  | A4  | C5  | E5  | G5  | B5  | D6  |
 
 Scale and Key change the notes. The lowest tine always sits between F♯3 and F4, so a kalimba in C
-starts on C4 and one in B on B3; OCT−/OCT+ move it.
+starts on C4, and one in B starts on B3. OCT− and OCT+ move it.
 
 In the Tine and Mirror layouts, the **black keys** do what **Black** says (Keys page, KNOB 4):
 
-- **Chords** (default): each key rolls a chord across the tines the way a thumb slides over them
-  (root, third, fifth, octave), **Strum ms** apart. The first seven keys are the triads on the
-  scale's seven degrees (C, Dm, Em, F, G, Am, Bdim in C major). The last four are sevenths on I, IV,
-  V and vi (CM7, FM7, G7, Am7). The chords follow the scale.
-- **Sharps**: a chromatic kalimba's second row. Each black key plays the tine of the white key to
-  its left, a semitone up.
-- **Perform**:
+- With **Chords**, the default, each key rolls a chord across the tines, the way a thumb slides over
+  them: root, third, fifth and octave, **Strum ms** apart. The first seven keys play the triads on the
+  scale's seven degrees (C, Dm, Em, F, G, Am and Bdim in C major). The last four play sevenths on I,
+  IV, V and vi (CM7, FM7, G7 and Am7). The chords follow the scale.
+- With **Sharps**, the black keys are a chromatic kalimba's second row. Each one plays the tine of the
+  white key to its left, a semitone up.
+- With **Perform**, the black keys do these:
 
-  | Black key | 1 (F♯3)         | 2 (G♯3)                         | 3 (A♯3)           | 4 (C♯4)                | 5 (D♯4)              | 6–11 (F♯4 … F♯5)                               |
-  | --------- | --------------- | ------------------------------- | ----------------- | ---------------------- | -------------------- | ---------------------------------------------- |
-  | Does      | Mute every tine | Cover the sound hole while held | Freeze the grains | Octave down while held | Octave up while held | Steel, Brass, Bronze, Aluminium, Bamboo, Glass |
+  | Black key | 1 (F♯3)          | 2 (G♯3)                          | 3 (A♯3)            | 4 (C♯4)                | 5 (D♯4)              | 6–11 (F♯4 … F♯5)                               |
+  | --------- | ---------------- | -------------------------------- | ------------------ | ---------------------- | -------------------- | ---------------------------------------------- |
+  | Does      | Mutes every tine | Covers the sound hole while held | Freezes the grains | Octave down while held | Octave up while held | Steel, Brass, Bronze, Aluminium, Bamboo, Glass |
 
 ![Chords on the black keys](docs/img/chords.png) ![Perform mode](docs/img/perform.png)
 
-**Keyboard layout** is a chromatic kalimba with a tine for every key. All 27 keys, white and
-black, play the note printed on them, F3 on the lowest up to G5. **Transpose** (±12 semitones) and
-the octave shift them.
+The **Keyboard** layout is a chromatic kalimba with a tine for every key. All 27 keys, white and
+black, play the note printed on them, from F3 on the lowest up to G5. **Transpose** (±12 semitones)
+and the octave shift them.
 
 ![The Keyboard layout](docs/img/keyboard.png)
 
-The FM-1's keys report only on and off, not how hard they're struck, so every key plucks at the
-same strength. **Hardness** sets how firm that pluck is. Over MIDI, velocity sets it.
+The FM-1's keys only report on and off, not how hard you strike them, so every key plucks at the
+same strength. **Hardness** sets how firm that pluck is. Over MIDI, the velocity sets it.
 
 ### Buttons
 
-The seven page buttons each own one to three pages. Pressing a button shows its first page; pressing
-it again flips to its next page and round. Dots after the page's name in the header show how many it
-has and which one you're on.
+Each of the seven page buttons has one to three pages. Press a button to see its first page, and
+press it again to flip to its next page, and round. Dots after the page's name in the header show how
+many pages it has and which one you're on.
 
-| Button                            | Pages            | What it does                                                                                                                                                                       |
-| --------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **HOME**                          | Tine → Character | The tine itself; its wear, pitch and ring                                                                                                                                          |
-| **ENV**                           | Body             | What the tines sit on                                                                                                                                                              |
-| **FX**                            | Space → Color    | The reverb and the echoes; tape, lo-fi, chorus, filter                                                                                                                             |
-| **LFO**                           | Grain → Spread   | The granular cloud; its scatter, the echoes' feedback, the stereo width                                                                                                            |
-| **SEL**                           | Keys → Play      | The layout, scale, key, black keys; the chord roll and the octave                                                                                                                  |
-| **SEQ**                           | Pattern          | The mbira pattern's settings                                                                                                                                                       |
-| **GLO**                           | Setup            | Tuning, MIDI, the theme; the version                                                                                                                                               |
-| **EDIT**                          |                  | Every page in turn                                                                                                                                                                 |
-| **ARP**                           |                  | **Tap:** the mbira pattern on and off (see [Patterns](#patterns)). Lit while it runs, dark on each beat. **Hold** (half a second): the Pattern page, without turning it on or off. |
-| **PLAY**                          |                  | Freeze the grain cloud (it keeps playing what's in its buffer); again to go live. Lit while frozen.                                                                                |
-| **REC**                           |                  | Palm mute: damps every tine at once                                                                                                                                                |
-| **OCT− / OCT+**                   |                  | Octave down / up (−2 to +2)                                                                                                                                                        |
-| **SAVE**                          |                  | Save now. Settings also save themselves about four seconds after a change, once everything is quiet. Hold for 1.5 s to reset to the defaults (below).                              |
-| **OCT− + OCT+, held 5 s**         |                  | Update mode (to install firmware)                                                                                                                                                  |
-| **OCT− + OCT+, held at power-on** |                  | Hardware calibration: the screen asks for each button and knob in turn                                                                                                             |
+| Button                            | Pages            | What it does                                                                                                                                                                                                             |
+| --------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **HOME**                          | Tine → Character | The tine itself, then its wear, pitch and ring.                                                                                                                                                                          |
+| **ENV**                           | Body             | What the tines sit on.                                                                                                                                                                                                   |
+| **FX**                            | Space → Color    | The reverb and the echoes, then tape, lo-fi, chorus and the filter.                                                                                                                                                      |
+| **LFO**                           | Grain → Spread   | The granular cloud, then its scatter, the echoes' feedback and the stereo width.                                                                                                                                         |
+| **SEL**                           | Keys → Play      | The layout, scale, key and black keys, then the chord roll and the octave.                                                                                                                                               |
+| **SEQ**                           | Pattern          | The mbira pattern's settings.                                                                                                                                                                                            |
+| **GLO**                           | Setup            | Tuning, MIDI and the theme. The header shows the version.                                                                                                                                                                |
+| **EDIT**                          |                  | Steps through every page in turn.                                                                                                                                                                                        |
+| **ARP**                           |                  | Tap it to start and stop the mbira pattern (see [Patterns](#patterns)). It's lit while the pattern runs, and goes dark on each beat. Hold it for half a second to open the Pattern page without starting or stopping it. |
+| **PLAY**                          |                  | Freezes the grain cloud, which keeps playing what's in its buffer. Press it again to go live. It's lit while frozen.                                                                                                     |
+| **REC**                           |                  | Palm mute: damps every tine at once.                                                                                                                                                                                     |
+| **OCT− / OCT+**                   |                  | Octave down or up, from −2 to +2.                                                                                                                                                                                        |
+| **SAVE**                          |                  | Saves now. Your settings also save themselves about four seconds after a change, once everything is quiet. Hold it for 1.5 s to reset to the defaults (below).                                                           |
+| **OCT− + OCT+, held 5 s**         |                  | Update mode, to install firmware.                                                                                                                                                                                        |
+| **OCT− + OCT+, held at power-on** |                  | Hardware calibration. The screen asks for each button and knob in turn.                                                                                                                                                  |
 
 ### Encoders and the MASTER knob
 
-| Control       | What it does                                                           |
-| ------------- | ---------------------------------------------------------------------- |
-| **MASTER**    | Volume                                                                 |
-| **SELECT**    | Material (Steel, Brass, Bronze, Aluminium, Bamboo, Glass)              |
-| **ALGORITHM** | Scale                                                                  |
-| **PRESETS**   | Key in the Tine layout, Transpose in the Keyboard layout               |
-| **KNOB 1–4**  | The values on the current page. Turning quickly moves in bigger steps. |
+| Control       | What it does                                                            |
+| ------------- | ----------------------------------------------------------------------- |
+| **MASTER**    | The volume.                                                             |
+| **SELECT**    | The material: Steel, Brass, Bronze, Aluminium, Bamboo or Glass.         |
+| **ALGORITHM** | The scale.                                                              |
+| **PRESETS**   | The key in the Tine layout, and Transpose in the Keyboard layout.       |
+| **KNOB 1–4**  | The values on the current page. Turn quickly to move in bigger steps.   |
 
 ### The pages and their knobs
 
-Each page puts up to four values on KNOB 1–4. The values are saved with your settings.
+Each page puts up to four values on KNOB 1–4, and they're saved with your settings.
 
-**HOME → Tine**, the tine itself
+**HOME → Tine**: the tine itself
 
-| Knob     | Range (default)                                        | What it does                                                                                                          |
-| -------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Material | Steel, Brass, Bronze, Aluminium, Bamboo, Glass (Steel) | What the tines are made of: their overtones, sustain and brightness ([below](#materials))                             |
-| Hardness | 0–100 (45)                                             | How the tine is plucked: 0 is the soft pad of a thumb (round, few overtones), 100 a fingernail (bright, with a click) |
-| Decay    | 0–100 (50)                                             | How long the tines ring, from about a quarter to four times their natural sustain                                     |
-| Tone     | 0–100 (55)                                             | How fast the upper overtones die away: low is dark and mellow, high keeps them ringing                                |
+| Knob     | Range (default)                                        | What it does                                                                                                                         |
+| -------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Material | Steel, Brass, Bronze, Aluminium, Bamboo, Glass (Steel) | What the tines are made of, which sets their overtones, sustain and brightness ([below](#materials)).                                |
+| Hardness | 0–100 (45)                                             | How the tine is plucked. At 0 it's the soft pad of a thumb, round with few overtones. At 100 it's a fingernail, bright with a click. |
+| Decay    | 0–100 (50)                                             | How long the tines ring, from about a quarter to four times their natural sustain.                                                   |
+| Tone     | 0–100 (55)                                             | How fast the upper overtones die away. Low is dark and mellow, and high keeps them ringing.                                          |
 
-**HOME → Character** (press HOME again), the instrument's wear, pitch and ring
+**HOME → Character** (press HOME again): the instrument's wear, pitch and ring
 
 ![The Character page](docs/img/character.png)
 
-| Knob    | Range (default)     | What it does                                                                                                                                                                                                                                                                               |
-| ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Worn    | 0–100 (0)           | An old, played-in kalimba. Each tine gets its own quirks, the same every time it's plucked: a little out of tune (up to ±12 cents at 100), a sustain longer or shorter than its neighbours', a faster or slower beat, and slightly uneven brightness and level. 0 is a perfect instrument. |
-| Glide   | 0–100 (30)          | The pluck going sharp: a hard pluck starts up to 40 cents sharp and settles in about 50 ms, as a real tine does when it swings wide. Strongest with high Hardness (or velocity over MIDI).                                                                                                 |
-| Tuning  | Equal, Just (Equal) | Just: pure 5-limit intervals over the key (Tine) or over the C key (Keyboard). The Mbira scale keeps its own tuning.                                                                                                                                                                       |
-| Release | Ring, Damp (Ring)   | Ring: a tine keeps ringing after you let go, as on a real kalimba. Damp: letting go puts a finger on it.                                                                                                                                                                                   |
+| Knob    | Range (default)     | What it does                                                                                                                                                                                                                                                                                             |
+| ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Worn    | 0–100 (0)           | Makes it an old, played-in kalimba. Each tine gets its own quirks, the same every time you pluck it: a little out of tune (up to ±12 cents at 100), a sustain longer or shorter than its neighbours', a faster or slower beat, and slightly uneven brightness and level. At 0 it's a perfect instrument. |
+| Glide   | 0–100 (30)          | The pluck going sharp. A hard pluck starts up to 40 cents sharp and settles in about 50 ms, as a real tine does when it swings wide. It's strongest with a high Hardness, or a high velocity over MIDI.                                                                                                  |
+| Tuning  | Equal, Just (Equal) | Just tunes pure 5-limit intervals over the key (Tine) or over the C key (Keyboard). The Mbira scale keeps its own tuning.                                                                                                                                                                                |
+| Release | Ring, Damp (Ring)   | With Ring, a tine keeps ringing after you let go, as on a real kalimba. With Damp, letting go puts a finger on it.                                                                                                                                                                                       |
 
-**ENV → Body**, what the tines sit on
+**ENV → Body**: what the tines sit on
 
-| Knob     | Range (default)               | What it does                                                                                                                                                                                                                          |
-| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Body     | None, Board, Box, Gourd (Box) | None: the bare tine. Board: a plank, thin and bright, with a woody knock. Box: a hollow box with a sound hole, warm, with a bloom around 200 Hz. Gourd: a calabash resonator, boomy, hollow and dark. All at about the same loudness. |
-| Buzz     | 0–100 (0)                     | Mbira buzzers (bottle caps, shells) that rattle when the body moves past a threshold                                                                                                                                                  |
-| Wah      | 0–100 (0)                     | How much wah: how far a hand covers the sound hole, muffling the sound like a vowel closing. With Wah rate on, how far the fluttering hand goes (Box and Gourd only: Board and None have no hole)                                     |
-| Wah rate | Off, 1–100 (Off)              | Off: the hand stays where Wah puts it (the mod wheel, pressure and the Hole key add to it). Above that, it flutters from open to Wah and back, 0.1 to 8 Hz.                                                                           |
+| Knob     | Range (default)               | What it does                                                                                                                                                                                                                                                  |
+| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Body     | None, Board, Box, Gourd (Box) | None is the bare tine. Board is a plank, thin and bright, with a woody knock. Box is a hollow box with a sound hole, warm, with a bloom around 200 Hz. Gourd is a calabash resonator, boomy, hollow and dark. They're all about as loud as each other.        |
+| Buzz     | 0–100 (0)                     | Mbira buzzers, bottle caps or shells, that rattle when the body moves past a threshold.                                                                                                                                                                       |
+| Wah      | 0–100 (0)                     | How much wah: how far a hand covers the sound hole, muffling the sound like a vowel closing. With Wah rate on, it's how far the fluttering hand goes. It only works on Box and Gourd, because Board and None have no hole.                                    |
+| Wah rate | Off, 1–100 (Off)              | At Off, the hand stays where Wah puts it, and the mod wheel, pressure and the Hole key add to it. Above that, the hand flutters from open to Wah and back, at 0.1 to 8 Hz.                                                                                    |
 
 **FX → Space**
 
-| Knob   | Range (default) | What it does                                                |
-| ------ | --------------- | ----------------------------------------------------------- |
-| Reverb | 0–100 (30)      | How much goes to the plate reverb                           |
-| Size   | 0–100 (60)      | The reverb's decay, a small room to a long hall             |
-| Delay  | 0–100 (0)       | The echoes' level                                           |
-| Time   | 40–740 ms (330) | The time between echoes, left and right in turn (ping-pong) |
+| Knob   | Range (default) | What it does                                                         |
+| ------ | --------------- | -------------------------------------------------------------------- |
+| Reverb | 0–100 (30)      | How much goes to the plate reverb.                                   |
+| Size   | 0–100 (60)      | The reverb's decay, from a small room to a long hall.                |
+| Delay  | 0–100 (0)       | The echoes' level.                                                   |
+| Time   | 40–740 ms (330) | The time between echoes, which alternate left and right (ping-pong). |
 
-**FX → Color** (press FX again), colour on the whole sound
+**FX → Color** (press FX again): colour on the whole sound
 
-| Knob   | Range (default)             | What it does                                                                                                                                        |
-| ------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tape   | 0–100 (0)                   | Wow (a slow pitch waver), flutter (a fast one) and drift, up to about 12 cents, and tape saturation                                                 |
-| Lo-fi  | 0–100 (0)                   | A cheaper machine: the top rolls off (down to about 2.8 kHz), the stereo image narrows, and there's hiss that fades to silence when the music stops |
-| Chorus | 0–100 (0)                   | A slow stereo ensemble on the instrument, before the echoes and the reverb                                                                          |
-| Filter | LP 100 … Off … HP 100 (Off) | Left of centre a low-pass sweeping down to about 200 Hz; right a high-pass up to about 4 kHz; more resonant the further it goes                     |
+| Knob   | Range (default)             | What it does                                                                                                                                                |
+| ------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tape   | 0–100 (0)                   | Wow (a slow pitch waver), flutter (a fast one) and drift, up to about 12 cents, with tape saturation.                                                       |
+| Lo-fi  | 0–100 (0)                   | A cheaper machine. The top rolls off (down to about 2.8 kHz), the stereo image narrows, and there's hiss that fades to silence when the music stops.        |
+| Chorus | 0–100 (0)                   | A slow stereo ensemble on the instrument, before the echoes and the reverb.                                                                                 |
+| Filter | LP 100 … Off … HP 100 (Off) | Left of centre, a low-pass that sweeps down to about 200 Hz. Right of centre, a high-pass up to about 4 kHz. It gets more resonant the further you turn it. |
 
-Every one of these fades in and out without a click, including turning the filter straight through
+All of these fade in and out without a click, even when you turn the filter straight through the
 centre.
 
-**LFO → Grain**, a granular cloud made from what you've just played
+**LFO → Grain**: a granular cloud made from what you've just played
 
-| Knob     | Range (default)                                  | What it does                                                                                                    |
-| -------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| Grains   | 0–100 (0)                                        | The cloud's level                                                                                               |
-| Grain ms | 20–500 (140)                                     | How long each grain lasts                                                                                       |
-| Density  | 1–60 a second (14)                               | How many grains start each second                                                                               |
-| Pitch    | −12, −7, 0, +7, +12, +19, Shimmer, Reverse (+12) | The grains' pitch in semitones. Shimmer mixes unison, fifth and octave at random; Reverse plays them backwards. |
+| Knob     | Range (default)                                  | What it does                                                                                                         |
+| -------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Grains   | 0–100 (0)                                        | The cloud's level.                                                                                                   |
+| Grain ms | 20–500 (140)                                     | How long each grain lasts.                                                                                           |
+| Density  | 1–60 a second (14)                               | How many grains start each second.                                                                                   |
+| Pitch    | −12, −7, 0, +7, +12, +19, Shimmer, Reverse (+12) | The grains' pitch in semitones. Shimmer mixes unison, fifth and octave at random, and Reverse plays them backwards.  |
 
 **LFO → Spread** (press LFO again)
 
-| Knob     | Range (default) | What it does                                                                    |
-| -------- | --------------- | ------------------------------------------------------------------------------- |
-| Spray    | 0–100 (30)      | How scattered the grains are in position, timing, pitch and pan                 |
-| Feedback | 0–95 (45)       | How many echoes: each is this fraction of the one before                        |
-| Width    | 0–100 (70)      | Stereo width: the tines' spread from left to right, and the grains' and echoes' |
+| Knob     | Range (default) | What it does                                                                                  |
+| -------- | --------------- | --------------------------------------------------------------------------------------------- |
+| Spray    | 0–100 (30)      | How scattered the grains are in position, timing, pitch and pan.                              |
+| Feedback | 0–95 (45)       | How many echoes you hear. Each one is this fraction of the one before.                        |
+| Width    | 0–100 (70)      | The stereo width: how far the tines spread from left to right, and the grains and echoes too. |
 
-**SEL → Keys**: Layout, Scale, Key, Black in the Tine and Mirror layouts; Layout, Transpose, Octave in Keyboard
+**SEL → Keys**: Layout, Scale, Key and Black in the Tine and Mirror layouts, or Layout, Transpose and Octave in Keyboard
 
-| Knob      | Range (default)                                                                                                      | What it does                                                                                                                               |
-| --------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Layout    | Tine, Keyboard, Mirror (Tine)                                                                                        | [Keys](#keys)                                                                                                                              |
-| Scale     | Major, Minor, Penta, Penta m, Dorian, Mixolydian, Lydian, Harmonic minor, Hirajoshi, Blues, Mbira, Chromatic (Major) | The tines' scale (Tine layout). Mbira approximates a Shona _Nyamaropa_ tuning, close to an equal seven-step octave with a near-pure fifth. |
-| Key       | C–B (C)                                                                                                              | The tonic (Tine layout)                                                                                                                    |
-| Black     | Chords, Sharps, Perform (Chords)                                                                                     | What the black keys do (Tine layout)                                                                                                       |
-| Transpose | −12–+12 (0)                                                                                                          | Shifts the Keyboard layout in semitones                                                                                                    |
-| Octave    | −2–+2 (0)                                                                                                            | The same as OCT−/OCT+                                                                                                                      |
+| Knob      | Range (default)                                                                                                      | What it does                                                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Layout    | Tine, Keyboard, Mirror (Tine)                                                                                        | See [Keys](#keys).                                                                                                                            |
+| Scale     | Major, Minor, Penta, Penta m, Dorian, Mixolydian, Lydian, Harmonic minor, Hirajoshi, Blues, Mbira, Chromatic (Major) | The tines' scale (Tine layout). Mbira approximates a Shona _Nyamaropa_ tuning, close to an equal seven-step octave with a near-pure fifth.    |
+| Key       | C–B (C)                                                                                                              | The tonic (Tine layout).                                                                                                                      |
+| Black     | Chords, Sharps, Perform (Chords)                                                                                     | What the black keys do (Tine layout).                                                                                                         |
+| Transpose | −12–+12 (0)                                                                                                          | Shifts the Keyboard layout in semitones.                                                                                                      |
+| Octave    | −2–+2 (0)                                                                                                            | The same as OCT− and OCT+.                                                                                                                    |
 
 **SEL → Play** (press SEL again)
 
-| Knob     | Range (default) | What it does                                         |
-| -------- | --------------- | ---------------------------------------------------- |
-| Strum ms | 0–120 (30)      | The time between the notes of a black-key chord roll |
-| Octave   | −2–+2 (0)       | The same as OCT−/OCT+                                |
+| Knob     | Range (default) | What it does                                           |
+| -------- | --------------- | ------------------------------------------------------ |
+| Strum ms | 0–120 (30)      | The time between the notes of a black-key chord roll.  |
+| Octave   | −2–+2 (0)       | The same as OCT− and OCT+.                             |
 
 **SEQ → Pattern** (or hold ARP)
 
-| Knob    | Range (default)                               | What it does                                                                          |
-| ------- | --------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Pattern | Thumbs, Cascade, 3 over 2, Interlock (Thumbs) | Which mbira pattern ARP plays ([below](#patterns))                                    |
-| Tempo   | 40–200 BPM (96)                               | The pattern's tempo, three pulses to a beat. MIDI clock takes over while it comes in. |
+| Knob    | Range (default)                               | What it does                                                                                    |
+| ------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Pattern | Thumbs, Cascade, 3 over 2, Interlock (Thumbs) | Which mbira pattern ARP plays ([below](#patterns)).                                             |
+| Tempo   | 40–200 BPM (96)                               | The pattern's tempo, three pulses to a beat. MIDI clock takes over while it's coming in.        |
 
 **GLO → Setup**
 
-| Knob     | Range (default)     | What it does                                                                     |
-| -------- | ------------------- | -------------------------------------------------------------------------------- |
-| Tune     | −50–+50 cents (0)   | Fine tuning                                                                      |
-| MIDI ch  | Omni, 1–16 (Omni)   | The channel MIDI is received on                                                  |
-| MIDI out | Off, On (Off)       | Send the keys as MIDI notes                                                      |
-| Theme    | Light, Dark (Light) | The screen's colours: pale wood and dark ink, or near-black with cream and amber |
+| Knob     | Range (default)     | What it does                                                                         |
+| -------- | ------------------- | ------------------------------------------------------------------------------------ |
+| Tune     | −50–+50 cents (0)   | Fine tuning.                                                                         |
+| MIDI ch  | Omni, 1–16 (Omni)   | The channel MIDI is received on.                                                     |
+| MIDI out | Off, On (Off)       | Sends the keys as MIDI notes.                                                        |
+| Theme    | Light, Dark (Light) | The screen's colours: pale wood and dark ink, or near-black with cream and amber.    |
 
-**Reset to the defaults:** hold SAVE for 1.5 s. The header asks "RESET? SAVE: YES": press SAVE to
-put every sound setting back to its default (the pattern stops, frozen grains let go), or any other
-button or key, or nothing for 5 s, to keep everything. The Setup page (Tune, MIDI, Theme) is kept
-either way. Like any change, it's saved a few seconds later.
+**Reset to the defaults:** hold SAVE for 1.5 s, and the header asks "RESET? SAVE: YES". Press SAVE to
+put every sound setting back to its default. The pattern stops and frozen grains let go. To keep
+everything, press any other button or key, or wait 5 s. The Setup page (Tune, MIDI and Theme) stays as
+it is either way. Like any change, the reset is saved a few seconds later.
 
-The Setup page's header shows the firmware's **version** (DEV on a build that isn't a release) and
-the audio load (**CPU %**), and counts any dropouts, so you can check the firmware's load on the
+The Setup page's header shows the firmware's **version** (DEV on a build that isn't a release) and the
+audio load (**CPU %**), and counts any dropouts, so you can check how hard the firmware works on the
 hardware.
 
 ![The Dark theme](docs/img/dark.png)
@@ -335,42 +337,56 @@ hardware.
 
 ![Setup page](docs/img/setup.png) ![A body with the wah moving](docs/img/body_wah.png) ![The knobs](docs/img/knobs.png)
 
-- **Header:** the page's name, with tags: **FRZ** when the grains are frozen, **PAT** when a
-  pattern runs (bright on the beat), **DAMP** when Release is Damp. A dot means unsaved changes. On
-  the right is the key and scale, or "Keyboard" and its transpose (or the CPU load on Setup).
-  Messages such as "SAVED" or "OCTAVE +1" take the header's place for a moment.
-- **The instrument:** a kalimba seen from above. The body's wood holds the sound hole, which
-  shrinks as it's covered, and the bridge. Each tine's length is that of a real tine at its pitch
-  (a tine's frequency goes as 1/length²). A tine glows and swings while it rings, and each shows its
-  note letter, with sharps and flats tinted. A dot marks the tonic. In the Keyboard layout the black
-  keys' tines are a narrower second row between the white ones.
-- **The black-key strip:** what each black key plays: its chord, its note, or its Perform role. It
-  lights while held.
+- **The header** shows the page's name, with tags: **FRZ** when the grains are frozen, **PAT** when
+  a pattern runs (bright on the beat), and **DAMP** when Release is Damp. A dot means you have unsaved
+  changes. On the right is the key and scale, or "Keyboard" and its transpose (or the CPU load on the
+  Setup page). Messages such as "SAVED" or "OCTAVE +1" take the header's place for a moment.
+- **The instrument** is a kalimba seen from above. The body's wood holds the bridge and the sound
+  hole, which shrinks as it's covered. Each tine is as long as a real tine at its pitch (a tine's
+  frequency goes as 1/length²). A tine glows and swings while it rings, and shows its note's letter,
+  with sharps and flats tinted. A dot marks the tonic. In the Keyboard layout, the black keys' tines
+  are a narrower second row between the white ones.
+- **The black-key strip** shows what each black key plays: its chord, its note, or its Perform role.
+  A key's place lights up while you hold it.
+- **The knobs band** shows the page's four values, each with its name, its value and a bar. The one
+  you turned is highlighted for a moment.
 
-The keys' own lights follow the tines: a key lights while its tine rings. The middle of the kalimba,
-the key under the lowest tine (white key 9 in Tine, 8 in Mirror; in Keyboard the key that plays
-middle C), glows dimly so you can find it without looking.
-- **The knobs band:** the page's four values, each with its name, value and a bar. The one you
-  turned is highlighted for a moment.
+The keys' own lights follow the tines: a key lights up while its tine rings. The middle of the
+kalimba glows dimly, so you can find it without looking. That's the key under the lowest tine (white
+key 9 in Tine, 8 in Mirror), or in the Keyboard layout, the key that plays middle C.
 
 ### MIDI
 
 MIDI comes in over USB and the TRS jack, on the Setup page's MIDI channel (Omni by default).
 
-| Message                            | What it does                                                                                                                                    |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Note on                            | Plucks the tine of that pitch at that velocity (with Tuning and Tune applied). With a pattern running, the notes held become its chord instead. |
-| Note off                           | Damps the tine when Release is Damp                                                                                                             |
-| CC 1 (mod wheel), channel pressure | A finger over the sound hole (the wah)                                                                                                          |
-| CC 64 (sustain)                    | Holds damps back until the pedal lifts                                                                                                          |
-| CC 72 / 73 / 74                    | Decay / Hardness / Tone                                                                                                                         |
-| CC 91 / 93 / 94                    | Reverb / Grains / Delay                                                                                                                         |
-| CC 120, CC 123                     | Damp everything                                                                                                                                 |
-| Program change                     | Material (0–5, wrapping)                                                                                                                        |
-| Pitch bend                         | ±2 semitones, on every ringing tine                                                                                                             |
-| Clock, Start, Continue, Stop       | The pattern follows the clock: Start resets the cycle, Stop holds it                                                                            |
+| Message                            | What it does                                                                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Note on                            | Plucks the tine of that pitch at that velocity, with Tuning and Tune applied. While a pattern runs, the notes you hold become its chord instead.    |
+| Note off                           | Damps the tine when Release is Damp.                                                                                                                |
+| CC 1 (mod wheel), channel pressure | A finger over the sound hole (the wah).                                                                                                             |
+| CC 64 (sustain)                    | Holds damps back until the pedal lifts.                                                                                                             |
+| CC 72 / 73 / 74                    | Decay / Hardness / Tone.                                                                                                                            |
+| CC 91 / 93 / 94                    | Reverb / Grains / Delay.                                                                                                                            |
+| CC 120, CC 123                     | Damp everything.                                                                                                                                    |
+| Program change                     | The material (0–5, wrapping round).                                                                                                                 |
+| Pitch bend                         | ±2 semitones, on every ringing tine.                                                                                                                |
+| Clock, Start, Continue, Stop       | The pattern follows the clock. Start resets the cycle, and Stop holds it.                                                                           |
 
-**Out** (off by default; Setup KNOB 3): the keys are sent as notes on the Setup channel (channel 1 when Omni).
+MIDI out is off by default, and you can turn it on with KNOB 3 on the Setup page. The keys then go out
+as notes on the Setup page's channel, or on channel 1 when it's Omni.
+
+### Screen reader
+
+FiMba-1 tells [FM-1 Screen Reader](https://charlesvestal.github.io/fm1-reader/) what its screen shows,
+over USB. You'll hear the page and its knobs, a knob's value as you turn it, and what each button did.
+When it starts listening, or when you ask, it reads the whole screen, the header too. Open that page in
+Chrome with the FM-1 plugged in. It speaks with its own voice, or hands the text to your computer's
+screen reader. FiMba-1 sends nothing until the reader is listening, so a DAW on the same port never
+sees it.
+
+The browser version does the same. **Speak the screen**, under the panel, reads the screen through
+your screen reader or with the page's own voice, and you can reach every knob, button and key with the
+keyboard ([below](#the-browser-version)).
 
 ---
 
@@ -488,36 +504,46 @@ the white keys still play over it. With no chord picked yet, ARP starts on the k
 
 ## The browser version
 
-**<https://jadamsowers.github.io/fm1-fimba/>**: the firmware's UI and sound engine compiled to
-WebAssembly, running at the FM-1's 44.1 kHz in an AudioWorklet. What you hear is the same physical
-model the FM-1 would run.
+**<https://jadamsowers.github.io/fm1-fimba/>** runs the firmware's UI and sound engine, compiled to
+WebAssembly, at the FM-1's 44.1 kHz in an AudioWorklet. What you hear is the same physical model the
+FM-1 runs.
 
-- **Mouse and touch:** drag a knob up or down, or scroll over it. Click or touch keys and buttons;
-  several fingers work on a touch screen. Shift-click (or right-click) a button to hold it down.
+- **Mouse and touch:** drag a knob up or down, or scroll over it. Click or touch the keys and buttons.
+  Several fingers work on a touch screen. Shift-click (or right-click) a button to hold it down.
 - **Computer keyboard:**
   - **Keys:** white keys 1–8 are <kbd>Q</kbd>–<kbd>I</kbd>, white keys 9–16 are <kbd>A</kbd>–<kbd>K</kbd>,
     and black keys 1–11 are <kbd>1</kbd>–<kbd>0</kbd> and <kbd>-</kbd>.
-  - **Buttons:** <kbd>Space</kbd> freeze, <kbd>Enter</kbd> mute, <kbd>Esc</kbd> HOME,
-    <kbd>Z</kbd>/<kbd>X</kbd> OCT−/OCT+.
-  - **Material:** <kbd>↑</kbd>/<kbd>↓</kbd>.
+  - **Buttons:** <kbd>Space</kbd> freezes, <kbd>Enter</kbd> mutes, <kbd>Esc</kbd> is HOME, and
+    <kbd>Z</kbd> and <kbd>X</kbd> are OCT− and OCT+.
+  - **Material:** <kbd>↑</kbd> and <kbd>↓</kbd>.
+  - These shortcuts work while the panel (or nothing else) has focus. You can turn them off with
+    **Keyboard shortcuts**.
+- **Screen reader and keyboard:** <kbd>Tab</kbd> reaches every knob, button and key. Arrow keys turn a
+  knob, and <kbd>Page Up</kbd> and <kbd>Page Down</kbd> turn it faster. <kbd>Space</kbd> or
+  <kbd>Enter</kbd> holds a button or key while you hold it, and <kbd>Shift</kbd>+<kbd>Enter</kbd> keeps
+  a button down. A lit button says so. **Speak the screen** reads the screen as
+  [the FM-1 does](#screen-reader), through your screen reader or with the page's own voice, and **Read
+  the screen** says all of it again.
 - **MIDI:** "Connect MIDI" uses Web MIDI (Chrome or Edge).
 - **Saving:** SAVE keeps your settings in that browser.
 
 ### Installing from the page
 
-The same page installs FiMba-1 on your FM-1 (Chrome or Edge: it uses Web MIDI with SysEx), using
-Felucca's update protocol, the one the command-line installer speaks. Connect the FM-1 by USB and
-press **Install FiMba-1 X.Y.Z** to install the latest release. Or choose any `.fwsc` file (a release,
-a pull request's build) and press **Install this file**. Under **Back to the stock firmware**, choose
-M-VAVE's own FM-1 V16 or V15 file; it's checked (SHA-256) before anything is written (the FM-1 takes
-only the version whose bootloader it has: if one is refused, choose the other). The same button takes
-an FM-1 back from M-VAVE's FM1 Open firmware. M-VAVE's own updater, M-UPGRADE 3.11, finds FiMba-1
-0.7.0 and later. An interrupted install picks up where it stopped when you press Install again.
+The same page installs FiMba-1 on your FM-1. It needs Chrome or Edge, because it uses Web MIDI with
+SysEx, and it speaks Felucca's update protocol, the same one as the command-line installer. Connect
+the FM-1 by USB and press **Install FiMba-1 X.Y.Z** to install the latest release. Or choose any
+`.fwsc` file, from a release or a pull request's build, and press **Install this file**. If an install
+is interrupted, press Install again and it picks up where it stopped.
 
-The site is rebuilt and published by GitHub Actions whenever a change reaches `main`. Every pull
-request is built and tested first ([below](#continuous-integration)). To build it yourself (needs
-Emscripten), run `web/emu/build.sh`. It makes `build/emu/`, including `build/emu/FiMba-1.html`, all
-of it in one file that runs straight from disk.
+To go back, open **Back to the stock firmware** and choose M-VAVE's own FM-1 V16 or V15 file. The page
+checks it (SHA-256) before anything is written. The FM-1 only takes the version whose bootloader it
+already has, so if it refuses one file, choose the other. The same button also takes an FM-1 back from
+M-VAVE's FM1 Open firmware. M-VAVE's own updater, M-UPGRADE 3.11, finds FiMba-1 0.7.0 and later.
+
+GitHub Actions rebuilds and publishes the site whenever a change reaches `main`, and builds and tests
+every pull request first ([below](#continuous-integration-and-releases)). To build it yourself, you
+need Emscripten: run `web/emu/build.sh`. It makes `build/emu/`, including `build/emu/FiMba-1.html`, the
+whole thing in one file that runs straight from disk.
 
 ---
 
@@ -552,17 +578,20 @@ or install the latest one straight from the [web page](https://jadamsowers.githu
 
 ### Installing safely
 
-- **The recovery path can't be overwritten.** The first 16 KiB of flash hold the chip's own boot
-  code and update mode. The update loader never writes there, so even a firmware that crashes at
-  once can't remove the way back.
-- **A firmware that can't start falls back.** After two failed starts the FM-1 comes up in **safe
-  mode** (no sound, USB on, the installer works). After four it enters the chip's own update mode.
-- **The package can be checked.** `tools/check_fwsc.py` takes a package apart, verifies every CRC,
-  and compares it region by region with FoMni's own package. Everything but the app is
-  byte-identical (see BUILDING.md, "Before installing").
-- **Have stock firmware ready.** Before the first install, download M-VAVE's stock firmware (FM-1
-  V16, "PC Firmware" at m-vave.com/download; V15 is on the Internet Archive). `tools/fm1_rescue.py` puts it back if the FM-1 ever
-  ends up in a crash loop, and FoMni's web installer can also restore it.
+- **The recovery path can't be overwritten.** The first 16 KiB of flash hold the chip's own boot code
+  and update mode. The update loader never writes there, so even a firmware that crashes at once
+  can't take away the way back.
+- **A firmware that can't start falls back.** After two failed starts, the FM-1 comes up in **safe
+  mode**, with no sound but USB on, and the installer still works. After four, it enters the chip's own
+  update mode.
+- **You can check the package.** `tools/check_fwsc.py` takes a package apart, verifies every CRC, and
+  compares it region by region with FoMni's own package. Everything but the app is byte-identical (see
+  BUILDING.md, "Before installing"). A release's package is also signed by the shared FM-1 builder,
+  so you can check it came from this source (`gh attestation verify`, in BUILDING.md).
+- **Have the stock firmware ready.** Before your first install, download M-VAVE's stock firmware (FM-1
+  V16, "PC Firmware" at m-vave.com/download; V15 is on the Internet Archive). If the FM-1 ever ends up
+  in a crash loop, `tools/fm1_rescue.py` puts it back. The web page's **Back to the stock firmware**
+  can restore it too.
 
 ### Continuous integration and releases
 
@@ -584,10 +613,10 @@ or install the latest one straight from the [web page](https://jadamsowers.githu
 
 When each part runs:
 
-| When                                     | What happens                                                                                                                                                                                                                                                                |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A pull request                           | All three jobs; the firmware (`fimba-firmware`) and the one-file web app (`FiMba-1-web`) can be downloaded from the run to try before merging                                                                                                                                    |
-| A push to `main` (a merged pull request) | All three jobs, then the browser version is published to GitHub Pages, with the latest release's firmware beside it for the page's installer                                                                                                                                     |
+| When                                     | What happens                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A pull request                           | All three jobs; the firmware (`fimba-firmware`) and the one-file web app (`FiMba-1-web`) can be downloaded from the run to try before merging                                                                                                                                                                                                                                                                      |
+| A push to `main` (a merged pull request) | All three jobs, then the browser version is published to GitHub Pages, with the latest release's firmware beside it for the page's installer                                                                                                                                                                                                                                                                       |
 | A push to `main` with a new `VERSION`    | A release, in the same run: a release build (the version shows on the splash screen and the Setup page, and the package identity is FM-1_8XXYYZZ), the commit tagged `vX.Y.Z`, a [GitHub Release](https://github.com/jadamsowers/fm1-fimba/releases) with the attested `fimba-X.Y.Z.fwsc` (its attestation verified first), `FiMba-1.html` and the notes from `CHANGELOG.md`, and the site's installer moved to it |
 
 To make a release, put the new version in `VERSION` and its notes under a `## X.Y.Z` heading in
