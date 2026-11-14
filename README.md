@@ -634,3 +634,5 @@ and [LICENSING.md](LICENSING.md). If you distribute FiMba-1 or firmware derived 
 give your recipients its complete corresponding source under the same licence.
 
 M-VAVE and FM-1 are trademarks of their owners. FiMba-1 is independent firmware.
+
+You can also try FiMba-1 in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
